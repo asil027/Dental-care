@@ -132,3 +132,4 @@ export default function InsurancePartners({ insurance = [] }) {
     </section>
   );
 }
+

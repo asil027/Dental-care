@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
 import QuickBooking from '../components/QuickBooking';
-import About from '../components/About';
 import Services from '../components/Services';
 import Doctors from '../components/Doctors';
 import Reviews from '../components/Reviews';
@@ -128,13 +127,6 @@ export default function PublicHome() {
             onBookingSuccess={() => {}}
           />
         )}
-
-        {/* About Dental Care Section */}
-        <About
-          cms={cms}
-          settings={settings}
-          onOpenBooking={() => handleOpenBooking()}
-        />
 
         {/* E. Dental Services Section */}
         {isSectionVisible('services') && (
