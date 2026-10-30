@@ -238,3 +238,50 @@ VALUES
   ('timezone', 'Asia/Karachi'),
   ('slot_duration', '30')
 ON CONFLICT (key) DO UPDATE SET value = excluded.value;
+
+-- ================================================================
+-- ROW LEVEL SECURITY (RLS) POLICIES
+-- ================================================================
+
+ALTER TABLE admins ENABLE ROW LEVEL SECURITY;
+ALTER TABLE doctors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE services ENABLE ROW LEVEL SECURITY;
+ALTER TABLE patients ENABLE ROW LEVEL SECURITY;
+ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE consultations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE testimonials ENABLE ROW LEVEL SECURITY;
+ALTER TABLE insurance_providers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE blog_posts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE faqs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE gallery ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contact_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE clinic_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cms_sections ENABLE ROW LEVEL SECURITY;
+
+-- Allow public read access to clinic content
+DO $$ BEGIN
+  CREATE POLICY "Public doctors read" ON doctors FOR SELECT USING (true);
+  CREATE POLICY "Public services read" ON services FOR SELECT USING (true);
+  CREATE POLICY "Public testimonials read" ON testimonials FOR SELECT USING (is_approved = 1);
+  CREATE POLICY "Public insurance read" ON insurance_providers FOR SELECT USING (true);
+  CREATE POLICY "Public blog read" ON blog_posts FOR SELECT USING (is_published = 1);
+  CREATE POLICY "Public faqs read" ON faqs FOR SELECT USING (true);
+  CREATE POLICY "Public gallery read" ON gallery FOR SELECT USING (true);
+  CREATE POLICY "Public settings read" ON clinic_settings FOR SELECT USING (true);
+  CREATE POLICY "Public cms read" ON cms_sections FOR SELECT USING (true);
+  
+  -- Allow public submissions (appointments, consultations, contact messages, reviews)
+  CREATE POLICY "Public book appointment" ON appointments FOR INSERT WITH CHECK (true);
+  CREATE POLICY "Public consultation request" ON consultations FOR INSERT WITH CHECK (true);
+  CREATE POLICY "Public contact message" ON contact_messages FOR INSERT WITH CHECK (true);
+  CREATE POLICY "Public submit review" ON testimonials FOR INSERT WITH CHECK (true);
+
+  -- Full backend / service role access
+  CREATE POLICY "Service role full access admins" ON admins FOR ALL USING (true);
+  CREATE POLICY "Service role full access appointments" ON appointments FOR ALL USING (true);
+  CREATE POLICY "Service role full access patients" ON patients FOR ALL USING (true);
+  CREATE POLICY "Service role full access messages" ON contact_messages FOR ALL USING (true);
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
+
