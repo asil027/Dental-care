@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, User, AlertCircle, Loader2, Sparkles, ShieldCheck } from 'lucide-react';
 import { apiRequest, setAdminToken } from '../utils/api';
+import BrandLogo from '../components/BrandLogo';
 
 export default function AdminLogin({ onLoginSuccess }) {
   const [username, setUsername] = useState('');
@@ -42,17 +43,16 @@ export default function AdminLogin({ onLoginSuccess }) {
       <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 border border-white/20">
         
         {/* Brand Header */}
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#0756A6] mx-auto mb-4 shadow-sm">
-            <svg className="w-9 h-9 fill-current text-[#0756A6]" viewBox="0 0 24 24">
-              <path d="M7 2C4 2 2 4.5 2 7.5c0 4 2 7.5 4 11.5 1 2 2.5 3 4 3s2-1 2.5-3c.5-2 1-3.5 1.5-3.5s1 1.5 1.5 3.5c.5 2 1 3 2.5 3s3-1 4-3c2-4 4-7.5 4-11.5C22 4.5 20 2 17 2c-2.5 0-4 2-5 3.5C11 4 9.5 2 7 2z" fillOpacity="0.15" stroke="#0756A6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
-          <h1 className="text-2xl font-black text-[#092C59]">
-            Dental Care Admin
-          </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Clinic Management & Website Administration Portal
+        <div className="flex flex-col items-center mb-8">
+          <BrandLogo
+            clinicName="Dental Care"
+            tagline="Private Admin Portal"
+            size="lg"
+            variant="dark"
+            className="mb-2"
+          />
+          <p className="text-xs text-slate-500 mt-1 text-center">
+            Clinic Management & Website Administration
           </p>
         </div>
 

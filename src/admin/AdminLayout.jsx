@@ -25,6 +25,7 @@ import {
   Mail
 } from 'lucide-react';
 import { apiRequest, setAdminToken } from '../utils/api';
+import BrandLogo from '../components/BrandLogo';
 
 export default function AdminLayout({ admin, onLogout }) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -88,21 +89,12 @@ export default function AdminLayout({ admin, onLogout }) {
         <div>
           {/* Logo & Clinic Tagline */}
           <div className="p-6 border-b border-blue-900/60 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-white">
-                <svg className="w-6 h-6 fill-current text-blue-300" viewBox="0 0 24 24">
-                  <path d="M7 2C4 2 2 4.5 2 7.5c0 4 2 7.5 4 11.5 1 2 2.5 3 4 3s2-1 2.5-3c.5-2 1-3.5 1.5-3.5s1 1.5 1.5 3.5c.5 2 1 3 2.5 3s3-1 4-3c2-4 4-7.5 4-11.5C22 4.5 20 2 17 2c-2.5 0-4 2-5 3.5C11 4 9.5 2 7 2z" fillOpacity="0.3" stroke="#93C5FD" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              <div>
-                <span className="text-base font-extrabold tracking-tight text-white block">
-                  Dental Care
-                </span>
-                <span className="text-[10px] text-blue-300 font-medium tracking-normal block -mt-1">
-                  Healthy Smiles, Brighter Future
-                </span>
-              </div>
-            </div>
+            <BrandLogo
+              clinicName="Dental Care"
+              tagline="Healthy Smiles, Brighter Future"
+              size="sm"
+              variant="light"
+            />
 
             <button
               onClick={() => setMobileSidebarOpen(false)}

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, Phone, MapPin, Clock, ArrowRight, Heart, CheckCircle2 } from 'lucide-react';
+import BrandLogo from './BrandLogo';
 
 export default function Footer({ settings }) {
   const [newsletterEmail, setNewsletterEmail] = useState('');
@@ -27,21 +28,13 @@ export default function Footer({ settings }) {
           
           {/* Col 1 (4 cols): Brand & Info */}
           <div className="lg:col-span-4 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-white">
-                <svg className="w-6 h-6 fill-current text-blue-300" viewBox="0 0 24 24">
-                  <path d="M7 2C4 2 2 4.5 2 7.5c0 4 2 7.5 4 11.5 1 2 2.5 3 4 3s2-1 2.5-3c.5-2 1-3.5 1.5-3.5s1 1.5 1.5 3.5c.5 2 1 3 2.5 3s3-1 4-3c2-4 4-7.5 4-11.5C22 4.5 20 2 17 2c-2.5 0-4 2-5 3.5C11 4 9.5 2 7 2z" fillOpacity="0.25" stroke="#93C5FD" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              <div>
-                <span className="text-xl font-extrabold tracking-tight text-white block">
-                  {clinicName}
-                </span>
-                <span className="text-[11px] text-blue-300 font-medium tracking-normal block -mt-1">
-                  {tagline}
-                </span>
-              </div>
-            </div>
+            {/* Stylish Brand Logo */}
+            <BrandLogo
+              clinicName={clinicName}
+              tagline={tagline}
+              size="md"
+              variant="light"
+            />
 
             <p className="text-xs sm:text-sm text-blue-100/80 leading-relaxed pr-4">
               Providing modern, compassionate, and painless dentistry in Lahore. Equipped with digital scanners, painless computer anesthesia, and specialized consultants.

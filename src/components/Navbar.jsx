@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Calendar, Phone, Clock, Menu, X } from 'lucide-react';
+import BrandLogo from './BrandLogo';
 
 export default function Navbar({ onOpenBooking, settings }) {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -61,22 +62,14 @@ export default function Navbar({ onOpenBooking, settings }) {
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-          {/* Logo with tooth icon matching reference image */}
-          <a href="#home" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#0756A6] shadow-sm group-hover:scale-105 transition-transform">
-              {/* Dental tooth SVG icon */}
-              <svg className="w-6 h-6 fill-current text-[#0756A6]" viewBox="0 0 24 24">
-                <path d="M7 2C4 2 2 4.5 2 7.5c0 4 2 7.5 4 11.5 1 2 2.5 3 4 3s2-1 2.5-3c.5-2 1-3.5 1.5-3.5s1 1.5 1.5 3.5c.5 2 1 3 2.5 3s3-1 4-3c2-4 4-7.5 4-11.5C22 4.5 20 2 17 2c-2.5 0-4 2-5 3.5C11 4 9.5 2 7 2z" fillOpacity="0.15" stroke="#0756A6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <div>
-              <div className="text-xl font-extrabold text-[#092C59] tracking-tight leading-tight">
-                {clinicName}
-              </div>
-              <div className="text-[11px] text-slate-500 font-medium tracking-normal -mt-0.5">
-                {tagline}
-              </div>
-            </div>
+          {/* Stylish Modern Brand Logo */}
+          <a href="#home" className="focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-2xl">
+            <BrandLogo
+              clinicName={clinicName}
+              tagline={tagline}
+              size="md"
+              variant="dark"
+            />
           </a>
 
           {/* Desktop Navigation Links */}
