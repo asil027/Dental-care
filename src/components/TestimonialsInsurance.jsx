@@ -125,6 +125,34 @@ export default function TestimonialsInsurance({ testimonials = [], insurance = [
                   </p>
                 </div>
               ))}
+
+              {/* Bottom Quick Callout to Write Review */}
+              <div className="bg-gradient-to-r from-blue-50 via-sky-50 to-indigo-50 border border-blue-200/80 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-3 text-center sm:text-left">
+                  <div className="w-10 h-10 rounded-xl bg-[#0756A6] text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <Star className="w-5 h-5 fill-amber-300 text-amber-300" />
+                  </div>
+                  <div>
+                    <h5 className="text-xs font-bold text-[#092C59]">
+                      Are you a recent Dental Care patient?
+                    </h5>
+                    <p className="text-[11px] text-slate-500">
+                      Share your experience, rate your dentist & help others smile brighter!
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSubmittedSuccess(false);
+                    setErrorMessage('');
+                    setShowReviewModal(true);
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#0756A6] hover:bg-[#092C59] transition shadow-xs whitespace-nowrap cursor-pointer shrink-0"
+                >
+                  Write a Review
+                </button>
+              </div>
             </div>
           </div>
 

@@ -25,7 +25,7 @@ export default function Navbar({ onOpenBooking, settings }) {
     { name: 'About', href: '#about' },
     { name: 'Services', href: '#services' },
     { name: 'Doctors', href: '#doctors' },
-    { name: 'Testimonials', href: '#testimonials' },
+    { name: 'Reviews', href: '#testimonials' },
     { name: 'Blog', href: '#blog' },
     { name: 'Contact', href: '#contact' },
   ];
