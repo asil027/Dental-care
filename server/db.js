@@ -3,12 +3,28 @@ const path = require('node:path');
 const fs = require('node:fs');
 const bcrypt = require('bcryptjs');
 
-const dbDir = path.join(__dirname, '..', 'data');
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
+let dbPath;
+if (process.env.VERCEL) {
+  const tmpDbPath = path.join('/tmp', 'dental_care.db');
+  const sourceDbPath = path.join(__dirname, '..', 'data', 'dental_care.db');
+  if (!fs.existsSync(tmpDbPath)) {
+    if (fs.existsSync(sourceDbPath)) {
+      try {
+        fs.copyFileSync(sourceDbPath, tmpDbPath);
+      } catch (e) {
+        console.error('Failed to copy sqlite db to /tmp:', e);
+      }
+    }
+  }
+  dbPath = tmpDbPath;
+} else {
+  const dbDir = path.join(__dirname, '..', 'data');
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+  }
+  dbPath = path.join(dbDir, 'dental_care.db');
 }
 
-const dbPath = path.join(dbDir, 'dental_care.db');
 const db = new DatabaseSync(dbPath);
 
 // Initialize Tables

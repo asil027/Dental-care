@@ -43,28 +43,34 @@ if (!fs.existsSync(uploadsDir)) {
 }
 app.use('/uploads', express.static(uploadsDir));
 
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/appointments', appointmentRoutes);
-app.use('/api/consultations', consultationRoutes);
-app.use('/api/doctors', doctorRoutes);
-app.use('/api/services', serviceRoutes);
-app.use('/api/patients', patientRoutes);
-app.use('/api/testimonials', testimonialRoutes);
-app.use('/api/insurance', insuranceRoutes);
-app.use('/api/blog', blogRoutes);
-app.use('/api/faqs', faqRoutes);
-app.use('/api/gallery', galleryRoutes);
-app.use('/api/cms', cmsRoutes);
-app.use('/api/settings', settingsRoutes);
-app.use('/api/messages', messageRoutes);
-app.use('/api/stats', statRoutes);
-app.use('/api/upload', uploadRoutes);
+// API Routes (Mounted both with and without /api prefix for Vercel serverless compatibility)
+const routeList = [
+  ['/auth', authRoutes],
+  ['/appointments', appointmentRoutes],
+  ['/consultations', consultationRoutes],
+  ['/doctors', doctorRoutes],
+  ['/services', serviceRoutes],
+  ['/patients', patientRoutes],
+  ['/testimonials', testimonialRoutes],
+  ['/insurance', insuranceRoutes],
+  ['/blog', blogRoutes],
+  ['/faqs', faqRoutes],
+  ['/gallery', galleryRoutes],
+  ['/cms', cmsRoutes],
+  ['/settings', settingsRoutes],
+  ['/messages', messageRoutes],
+  ['/stats', statRoutes],
+  ['/upload', uploadRoutes]
+];
 
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', time: new Date().toISOString() });
-});
+for (const [prefix, r] of routeList) {
+  app.use(`/api${prefix}`, r);
+  app.use(prefix, r);
+}
+
+// Health checks
+app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
+app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
 
 // Serve frontend build if exists
 const distDir = path.join(__dirname, '..', 'dist');
@@ -76,7 +82,7 @@ if (fs.existsSync(distDir)) {
 }
 
 // Start Server if run directly
-if (!process.env.VERCEL) {
+if (!process.env.VERCEL && require.main === module) {
   app.listen(PORT, () => {
     console.log(`[Dental Care Server] running on http://localhost:${PORT}`);
   });

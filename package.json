@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Premium Modern Dental Clinic Website and Private Admin Dashboard",
   "main": "server/index.js",
+  "engines": {
+    "node": ">=22.5.0"
+  },
   "scripts": {
     "build": "vite build",
     "build:client": "vite build",
