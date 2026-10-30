@@ -87,7 +87,33 @@ export default function DashboardHome() {
     );
   }
 
-  const { stats, upcomingAppointments, recentPatients, recentMessages = [], weeklyChart } = data;
+  const { stats, upcomingAppointments, recentPatients, recentMessages = [], recentTestimonials = [], weeklyChart } = data;
+
+  const handleToggleApproveReview = async (id) => {
+    try {
+      setData((prev) => {
+        if (!prev) return prev;
+        const updatedList = (prev.recentTestimonials || []).map((t) =>
+          t.id === id ? { ...t, is_approved: t.is_approved ? 0 : 1 } : t
+        );
+        const pendingCount = updatedList.filter((t) => !t.is_approved).length;
+        return {
+          ...prev,
+          recentTestimonials: updatedList,
+          stats: {
+            ...prev.stats,
+            pendingTestimonials: pendingCount
+          }
+        };
+      });
+      await apiRequest(`/testimonials/${id}/toggle-approve`, { method: 'PATCH' });
+      const res = await apiRequest('/stats/overview');
+      setData(res);
+    } catch (err) {
+      console.error('Failed to toggle review approval:', err);
+      fetchStats();
+    }
+  };
 
   // Compute SVG chart coordinates for spline curve
   const chartHeight = 120;
@@ -163,8 +189,8 @@ export default function DashboardHome() {
         </div>
       )}
       
-      {/* 4 Metric Cards matching reference image */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      {/* 5 Key Clinic & Portal Metrics */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         
         {/* Total Appointments */}
         <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center justify-between">
@@ -220,6 +246,35 @@ export default function DashboardHome() {
           </div>
           <div className="w-12 h-12 rounded-2xl bg-sky-50 text-[#0756A6] flex items-center justify-center border border-sky-100">
             <Stethoscope className="w-6 h-6" />
+          </div>
+        </div>
+
+        {/* Patient Reviews */}
+        <div
+          onClick={() => navigate('/admin/testimonials')}
+          className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center justify-between cursor-pointer hover:border-amber-300 transition"
+        >
+          <div>
+            <span className="text-xs font-semibold text-slate-500 block mb-1">
+              Patient Reviews
+            </span>
+            <div className="text-2xl font-black text-[#092C59]">
+              {stats.totalTestimonials !== undefined ? stats.totalTestimonials : (recentTestimonials ? recentTestimonials.length : 0)}
+            </div>
+            {stats.pendingTestimonials > 0 ? (
+              <div className="flex items-center gap-1 text-[11px] font-bold text-amber-600 mt-1">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                <span>{stats.pendingTestimonials} Pending Approval</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 mt-1">
+                <CheckCircle className="w-3.5 h-3.5" />
+                <span>All Live on Web</span>
+              </div>
+            )}
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center border border-amber-100">
+            <Star className="w-6 h-6 fill-amber-400" />
           </div>
         </div>
 
@@ -536,6 +591,21 @@ export default function DashboardHome() {
                 </span>
               )}
             </button>
+
+            <button
+              onClick={() => navigate('/admin/testimonials')}
+              className="w-full py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition flex items-center justify-between cursor-pointer shadow-xs"
+            >
+              <div className="flex items-center gap-2.5">
+                <Star className="w-4 h-4 text-amber-100 fill-amber-100" />
+                <span>Patient Reviews</span>
+              </div>
+              {stats.pendingTestimonials > 0 && (
+                <span className="px-2 py-0.5 rounded-full bg-white text-amber-700 text-[10px] font-extrabold animate-pulse">
+                  {stats.pendingTestimonials} Pending
+                </span>
+              )}
+            </button>
           </div>
 
           {/* Recent Patients Card matching reference image */}
@@ -546,7 +616,7 @@ export default function DashboardHome() {
               </h3>
               <button
                 onClick={() => navigate('/admin/patients')}
-                className="text-[11px] font-bold text-[#0756A6] hover:underline"
+                className="text-[11px] font-bold text-[#0756A6] hover:underline cursor-pointer"
               >
                 View All →
               </button>
@@ -578,6 +648,85 @@ export default function DashboardHome() {
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Recent Patient Reviews Card */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 space-y-3">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                <h3 className="text-sm font-extrabold text-[#092C59] uppercase tracking-wider">
+                  Patient Reviews
+                </h3>
+              </div>
+              <button
+                onClick={() => navigate('/admin/testimonials')}
+                className="text-[11px] font-bold text-[#0756A6] hover:underline cursor-pointer"
+              >
+                View All ({stats.totalTestimonials !== undefined ? stats.totalTestimonials : (recentTestimonials ? recentTestimonials.length : 0)}) →
+              </button>
+            </div>
+
+            {(!recentTestimonials || recentTestimonials.length === 0) ? (
+              <div className="p-4 text-center text-slate-400 text-xs">
+                No patient reviews submitted yet.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recentTestimonials.slice(0, 4).map((review) => (
+                  <div
+                    key={review.id}
+                    className="p-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition space-y-1.5"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-bold text-[#092C59] truncate">
+                        {review.patient_name || review.name || 'Patient'}
+                      </span>
+                      <div className="flex items-center text-amber-400 text-[11px]">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`w-3 h-3 ${i < (review.rating || 5) ? 'fill-amber-400 text-amber-400' : 'text-slate-200'}`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    {review.treatment && (
+                      <span className="inline-block text-[10px] font-semibold text-[#0756A6] bg-blue-50 px-2 py-0.5 rounded-md">
+                        {review.treatment}
+                      </span>
+                    )}
+                    <p className="text-[11px] text-slate-600 line-clamp-2 italic">
+                      "{review.review_text || review.comment || review.content}"
+                    </p>
+                    <div className="flex items-center justify-between pt-1 text-[11px]">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        review.is_approved
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : 'bg-amber-50 text-amber-700 border border-amber-200'
+                      }`}>
+                        {review.is_approved ? '✓ Live on Web' : '⏳ Awaiting Approval'}
+                      </span>
+                      {!review.is_approved ? (
+                        <button
+                          onClick={() => handleToggleApproveReview(review.id)}
+                          className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] transition cursor-pointer shadow-xs"
+                        >
+                          ✓ Approve Now
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleToggleApproveReview(review.id)}
+                          className="text-[10px] text-slate-400 hover:text-rose-600 font-semibold cursor-pointer"
+                        >
+                          Unpublish
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
         </div>

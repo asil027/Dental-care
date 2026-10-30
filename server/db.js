@@ -121,7 +121,34 @@ if (!db) {
             }
             return store.admins[0] || null;
           }
+          if (cleanSql.includes('from testimonials')) {
+            if (params.length > 0) {
+              return store.testimonials.find(t => t.id == params[0]) || null;
+            }
+            return store.testimonials[0] || null;
+          }
           if (cleanSql.includes('select count(*)')) {
+            if (cleanSql.includes('from testimonials')) {
+              if (cleanSql.includes('is_approved = 0')) {
+                return { count: store.testimonials.filter(t => t.is_approved == 0).length };
+              }
+              if (cleanSql.includes('is_approved = 1')) {
+                return { count: store.testimonials.filter(t => t.is_approved == 1).length };
+              }
+              return { count: store.testimonials.length };
+            }
+            if (cleanSql.includes('from contact_messages')) {
+              if (cleanSql.includes('is_read = 0')) {
+                return { count: store.contact_messages.filter(m => m.is_read == 0).length };
+              }
+              return { count: store.contact_messages.length };
+            }
+            if (cleanSql.includes('from appointments')) {
+              if (cleanSql.includes("status = 'pending'") || cleanSql.includes('status = ?')) {
+                return { count: store.appointments.filter(a => a.status === 'Pending').length };
+              }
+              return { count: store.appointments.length };
+            }
             for (const table of Object.keys(store)) {
               if (cleanSql.includes(`from ${table}`)) {
                 return { count: store[table].length };

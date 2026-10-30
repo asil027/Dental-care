@@ -23,8 +23,10 @@ router.get('/overview', authenticateAdmin, (req, res) => {
     // Inquiries / Messages & Testimonial review counts
     const totalMessages = db.prepare('SELECT COUNT(*) as count FROM contact_messages').get().count;
     const unreadMessages = db.prepare('SELECT COUNT(*) as count FROM contact_messages WHERE is_read = 0').get().count;
+    const totalTestimonials = db.prepare('SELECT COUNT(*) as count FROM testimonials').get().count;
     const pendingTestimonials = db.prepare('SELECT COUNT(*) as count FROM testimonials WHERE is_approved = 0').get().count;
     const recentMessages = db.prepare('SELECT * FROM contact_messages ORDER BY created_at DESC LIMIT 6').all();
+    const recentTestimonials = db.prepare('SELECT * FROM testimonials ORDER BY id DESC LIMIT 6').all();
 
     // Total Revenue (sum of fees of confirmed/completed appointments)
     const revRow = db.prepare("SELECT SUM(fee) as revenue FROM appointments WHERE status IN ('Confirmed', 'Completed')").get();
@@ -99,11 +101,13 @@ router.get('/overview', authenticateAdmin, (req, res) => {
         totalRevenue,
         totalMessages,
         unreadMessages,
+        totalTestimonials,
         pendingTestimonials
       },
       upcomingAppointments,
       recentPatients,
       recentMessages,
+      recentTestimonials,
       weeklyChart: weeklyData,
       monthlyStats
     });
