@@ -66,7 +66,38 @@ if (!db) {
     patients: [],
     appointments: [],
     consultations: [],
-    testimonials: [],
+    testimonials: [
+      {
+        id: 1,
+        patient_name: 'Zainab Tariq',
+        photo: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80',
+        rating: 5,
+        treatment: 'Painless Root Canal & Crown',
+        review_text: 'Had an emergency root canal done here and honestly felt zero pain throughout the procedure. Dr. Ayesha is gentle, professional and explained every single step.',
+        is_approved: 1,
+        created_at: new Date().toISOString()
+      },
+      {
+        id: 2,
+        patient_name: 'Usman Chaudhry',
+        photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
+        rating: 5,
+        treatment: 'Laser Teeth Whitening',
+        review_text: 'Amazing whitening results in just one session! The clinic environment is exceptionally clean and peaceful. Highly recommend Dental Care to everyone.',
+        is_approved: 1,
+        created_at: new Date().toISOString()
+      },
+      {
+        id: 3,
+        patient_name: 'Sarah Bilal',
+        photo: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80',
+        rating: 5,
+        treatment: 'Dental Veneers & Smile Makeover',
+        review_text: 'My smile transformation exceeded all my expectations. The staff was welcoming, courteous, and the clinic equipment is top tier. Truly world-class!',
+        is_approved: 1,
+        created_at: new Date().toISOString()
+      }
+    ],
     insurance_providers: [],
     blog_posts: [],
     faqs: [],
@@ -109,6 +140,12 @@ if (!db) {
           return null;
         },
         all: (...params) => {
+          if (cleanSql.includes('from testimonials')) {
+            if (cleanSql.includes('is_approved = 1')) {
+              return store.testimonials.filter(t => t.is_approved == 1);
+            }
+            return [...store.testimonials];
+          }
           for (const table of Object.keys(store)) {
             if (cleanSql.includes(`from ${table}`)) {
               return [...store[table]];
@@ -117,6 +154,30 @@ if (!db) {
           return [];
         },
         run: (...params) => {
+          if (cleanSql.includes('insert into testimonials')) {
+            const item = {
+              id: store.testimonials.length + 1,
+              patient_name: params[0],
+              photo: params[1],
+              rating: parseFloat(params[2]) || 5.0,
+              treatment: params[3],
+              review_text: params[4],
+              is_approved: params[5] !== undefined ? parseInt(params[5], 10) : 0,
+              created_at: new Date().toISOString()
+            };
+            store.testimonials.unshift(item);
+            return { changes: 1, lastInsertRowid: item.id };
+          }
+          if (cleanSql.includes('update testimonials') && cleanSql.includes('is_approved')) {
+            const item = store.testimonials.find(t => t.id == params[1]);
+            if (item) item.is_approved = params[0];
+            return { changes: 1 };
+          }
+          if (cleanSql.includes('delete from testimonials')) {
+            const idx = store.testimonials.findIndex(t => t.id == params[0]);
+            if (idx !== -1) store.testimonials.splice(idx, 1);
+            return { changes: 1 };
+          }
           if (cleanSql.includes('insert into admins')) {
             const newAdmin = {
               id: store.admins.length + 1,

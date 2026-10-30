@@ -25,10 +25,20 @@ export default function Navbar({ onOpenBooking, settings }) {
     { name: 'About', href: '#about' },
     { name: 'Services', href: '#services' },
     { name: 'Doctors', href: '#doctors' },
-    { name: 'Reviews', href: '#testimonials' },
+    { name: 'Reviews', href: '#reviews' },
     { name: 'Blog', href: '#blog' },
     { name: 'Contact', href: '#contact' },
   ];
+
+  const handleNavScroll = (e, href) => {
+    if (href.startsWith('#')) {
+      e.preventDefault();
+      const target = document.querySelector(href);
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  };
 
   return (
     <>
@@ -78,7 +88,8 @@ export default function Navbar({ onOpenBooking, settings }) {
               <a
                 key={link.name}
                 href={link.href}
-                className="text-[15px] font-medium text-slate-700 hover:text-[#0756A6] transition-colors relative py-1 hover:font-semibold"
+                onClick={(e) => handleNavScroll(e, link.href)}
+                className="text-[15px] font-medium text-slate-700 hover:text-[#0756A6] transition-colors relative py-1 hover:font-semibold cursor-pointer"
               >
                 {link.name}
               </a>
@@ -130,8 +141,11 @@ export default function Navbar({ onOpenBooking, settings }) {
               <a
                 key={link.name}
                 href={link.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className="block py-2 text-base font-medium text-slate-700 hover:text-[#0756A6] border-b border-slate-50"
+                onClick={(e) => {
+                  setMobileMenuOpen(false);
+                  handleNavScroll(e, link.href);
+                }}
+                className="block py-2 text-base font-medium text-slate-700 hover:text-[#0756A6] border-b border-slate-50 cursor-pointer"
               >
                 {link.name}
               </a>

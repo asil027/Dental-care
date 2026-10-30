@@ -46,8 +46,39 @@ export default function TestimonialsInsurance({ testimonials = [], insurance = [
     }
   };
 
+  const defaultSampleTestimonials = [
+    {
+      id: 101,
+      patient_name: 'Zainab Tariq',
+      rating: 5,
+      treatment: 'Painless Root Canal & Crown',
+      review_text: 'Had an emergency root canal done here and honestly felt zero pain throughout the procedure. Dr. Ayesha is gentle, professional and explained every single step.',
+      photo: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80'
+    },
+    {
+      id: 102,
+      patient_name: 'Usman Chaudhry',
+      rating: 5,
+      treatment: 'Laser Teeth Whitening',
+      review_text: 'Amazing whitening results in just one session! The clinic environment is exceptionally clean and peaceful. Highly recommend Dental Care to everyone.',
+      photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80'
+    },
+    {
+      id: 103,
+      patient_name: 'Sarah Bilal',
+      rating: 5,
+      treatment: 'Dental Veneers & Smile Makeover',
+      review_text: 'My smile transformation exceeded all my expectations. The staff was welcoming, courteous, and the clinic equipment is top tier. Truly world-class!',
+      photo: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80'
+    }
+  ];
+
+  const displayedTestimonials = testimonials && testimonials.length > 0 ? testimonials : defaultSampleTestimonials;
+
   return (
-    <section id="testimonials" className="py-20 bg-white">
+    <section id="reviews" className="scroll-mt-24 py-20 bg-white relative">
+      {/* Anchor alias so #testimonials also lands here */}
+      <span id="testimonials" className="absolute -top-24 pointer-events-none" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
@@ -83,7 +114,7 @@ export default function TestimonialsInsurance({ testimonials = [], insurance = [
             </div>
 
             <div className="space-y-4">
-              {testimonials.slice(0, 3).map((item) => (
+              {displayedTestimonials.slice(0, 3).map((item) => (
                 <div
                   key={item.id}
                   className="bg-[#F4F8FF]/80 rounded-2xl p-6 border border-blue-100 hover:border-blue-200 transition-all shadow-xs"

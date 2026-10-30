@@ -12,30 +12,35 @@ router.get('/', (req, res) => {
 
 // Public: Submit patient review (stored with is_approved = 0 until admin approves)
 router.post('/submit', (req, res) => {
-  const { patient_name, photo, rating = 5.0, treatment, review_text } = req.body;
-  if (!patient_name || !review_text) {
-    return res.status(400).json({ error: 'Please provide your name and review message.' });
+  try {
+    const { patient_name, photo, rating = 5.0, treatment, review_text } = req.body;
+    if (!patient_name || !review_text) {
+      return res.status(400).json({ error: 'Please provide your name and review message.' });
+    }
+
+    const cleanRating = Math.max(1, Math.min(5, parseFloat(rating) || 5.0));
+
+    const result = db.prepare(`
+      INSERT INTO testimonials (patient_name, photo, rating, treatment, review_text, is_approved)
+      VALUES (?, ?, ?, ?, ?, 0)
+    `).run(
+      patient_name.trim(),
+      photo ? photo.trim() : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+      cleanRating,
+      treatment ? treatment.trim() : 'General Dental Treatment',
+      review_text.trim()
+    );
+
+    const created = db.prepare('SELECT * FROM testimonials WHERE id = ?').get(result.lastInsertRowid);
+    res.status(201).json({
+      success: true,
+      message: 'Thank you for your review! It has been submitted for clinic verification and will appear on the website once approved by our team.',
+      testimonial: created
+    });
+  } catch (err) {
+    console.error('[Submit Review Error]', err);
+    res.status(500).json({ error: `Failed to submit review: ${err.message}` });
   }
-
-  const cleanRating = Math.max(1, Math.min(5, parseFloat(rating) || 5.0));
-
-  const result = db.prepare(`
-    INSERT INTO testimonials (patient_name, photo, rating, treatment, review_text, is_approved)
-    VALUES (?, ?, ?, ?, ?, 0)
-  `).run(
-    patient_name.trim(),
-    photo ? photo.trim() : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-    cleanRating,
-    treatment ? treatment.trim() : 'General Dental Treatment',
-    review_text.trim()
-  );
-
-  const created = db.prepare('SELECT * FROM testimonials WHERE id = ?').get(result.lastInsertRowid);
-  res.status(201).json({
-    success: true,
-    message: 'Thank you for your review! It has been submitted for clinic verification and will appear on the website once approved by our team.',
-    testimonial: created
-  });
 });
 
 // Admin: Get all testimonials
