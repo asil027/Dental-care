@@ -4,9 +4,10 @@
   "description": "Premium Modern Dental Clinic Website and Private Admin Dashboard",
   "main": "server/index.js",
   "scripts": {
+    "build": "vite build",
+    "build:client": "vite build",
     "dev:server": "node server/index.js",
     "dev:client": "vite",
-    "build:client": "vite build",
     "start": "node server/index.js"
   },
   "dependencies": {

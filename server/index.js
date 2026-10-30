@@ -75,8 +75,12 @@ if (fs.existsSync(distDir)) {
   });
 }
 
-// Start Server
-app.listen(PORT, () => {
-  console.log(`[Dental Care Server] running on http://localhost:${PORT}`);
-});
+// Start Server if run directly
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`[Dental Care Server] running on http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;
 
