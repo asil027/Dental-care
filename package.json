@@ -4,7 +4,7 @@
   "description": "Premium Modern Dental Clinic Website and Private Admin Dashboard",
   "main": "server/index.js",
   "engines": {
-    "node": ">=22.5.0"
+    "node": "22.x"
   },
   "scripts": {
     "build": "vite build",

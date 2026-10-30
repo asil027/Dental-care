@@ -36,10 +36,17 @@ app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 app.use(cookieParser());
 
-// Static uploads directory
-const uploadsDir = path.join(__dirname, '..', 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+// Static uploads directory (safe for Vercel read-only filesystem)
+const uploadsDir = process.env.VERCEL
+  ? path.join('/tmp', 'uploads')
+  : path.join(__dirname, '..', 'uploads');
+
+try {
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+} catch (e) {
+  console.warn('[Uploads] Directory creation skipped:', e.message);
 }
 app.use('/uploads', express.static(uploadsDir));
 
@@ -80,6 +87,12 @@ if (fs.existsSync(distDir)) {
     res.sendFile(path.join(distDir, 'index.html'));
   });
 }
+
+// Unhandled error handler
+app.use((err, req, res, next) => {
+  console.error('[Server Error]', err);
+  res.status(500).json({ error: err.message || 'Internal Server Error' });
+});
 
 // Start Server if run directly
 if (!process.env.VERCEL && require.main === module) {

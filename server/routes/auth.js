@@ -7,42 +7,47 @@ const router = express.Router();
 
 // Admin Login
 router.post('/login', (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password) {
-    return res.status(400).json({ error: 'Username/Email and Password are required' });
-  }
-
-  const query = db.prepare('SELECT * FROM admins WHERE username = ? OR email = ?');
-  const admin = query.get(username.trim(), username.trim());
-
-  if (!admin) {
-    return res.status(401).json({ error: 'Invalid username or password' });
-  }
-
-  const isMatch = bcrypt.compareSync(password, admin.password_hash);
-  if (!isMatch) {
-    return res.status(401).json({ error: 'Invalid username or password' });
-  }
-
-  const token = generateToken(admin);
-  res.cookie('admin_token', token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 7 * 24 * 60 * 60 * 1000
-  });
-
-  res.json({
-    success: true,
-    token,
-    admin: {
-      id: admin.id,
-      username: admin.username,
-      email: admin.email,
-      name: admin.name,
-      role: admin.role,
-      avatar: admin.avatar
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username/Email and Password are required' });
     }
-  });
+
+    const query = db.prepare('SELECT * FROM admins WHERE username = ? OR email = ?');
+    const admin = query.get(username.trim(), username.trim());
+
+    if (!admin) {
+      return res.status(401).json({ error: 'Invalid username or password' });
+    }
+
+    const isMatch = bcrypt.compareSync(password, admin.password_hash);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Invalid username or password' });
+    }
+
+    const token = generateToken(admin);
+    res.cookie('admin_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
+    res.json({
+      success: true,
+      token,
+      admin: {
+        id: admin.id,
+        username: admin.username,
+        email: admin.email,
+        name: admin.name,
+        role: admin.role,
+        avatar: admin.avatar
+      }
+    });
+  } catch (err) {
+    console.error('[Admin Login Error]', err);
+    res.status(500).json({ error: `Login error: ${err.message}` });
+  }
 });
 
 // Admin Verify / Me

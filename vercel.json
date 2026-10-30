@@ -2,6 +2,14 @@
   "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "env": {
+    "NODE_OPTIONS": "--experimental-sqlite"
+  },
+  "build": {
+    "env": {
+      "NODE_OPTIONS": "--experimental-sqlite"
+    }
+  },
   "functions": {
     "api/index.js": {
       "includeFiles": "data/**"
