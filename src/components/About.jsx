@@ -136,3 +136,4 @@ export default function About({ cms, settings, onOpenBooking }) {
     </section>
   );
 }
+

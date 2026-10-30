@@ -5,7 +5,8 @@ import QuickBooking from '../components/QuickBooking';
 import About from '../components/About';
 import Services from '../components/Services';
 import Doctors from '../components/Doctors';
-import TestimonialsInsurance from '../components/TestimonialsInsurance';
+import Reviews from '../components/Reviews';
+import InsurancePartners from '../components/InsurancePartners';
 import Faq from '../components/Faq';
 import Blog from '../components/Blog';
 import Contact from '../components/Contact';
@@ -151,13 +152,14 @@ export default function PublicHome() {
           />
         )}
 
-        {/* F. Testimonials and Insurance Section */}
-        {isSectionVisible('testimonials_insurance') && (
-          <TestimonialsInsurance
-            testimonials={testimonials}
-            insurance={insurance}
-          />
-        )}
+        {/* Dedicated Patient Reviews Section with Live Write Form */}
+        <Reviews
+          testimonials={testimonials}
+          onReviewSubmitted={() => loadPublicData()}
+        />
+
+        {/* Insurance Partners & Direct Billing */}
+        <InsurancePartners insurance={insurance} />
 
         {/* G. FAQ Section */}
         {isSectionVisible('faq') && (
