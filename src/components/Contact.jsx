@@ -43,10 +43,23 @@ export default function Contact({ settings }) {
     setErrorMessage('');
 
     try {
-      await apiRequest('/messages', {
+      const res = await apiRequest('/messages', {
         method: 'POST',
         body: JSON.stringify(formData)
       });
+      // Save locally to ensure immediate persistence across reloads
+      try {
+        const localMsgs = JSON.parse(localStorage.getItem('dc_submitted_messages') || '[]');
+        const newRecord = res.messageRecord || {
+          id: Date.now(),
+          ...formData,
+          is_read: 0,
+          created_at: new Date().toISOString().replace('T', ' ').slice(0, 19)
+        };
+        localMsgs.unshift(newRecord);
+        localStorage.setItem('dc_submitted_messages', JSON.stringify(localMsgs));
+      } catch (e) {}
+
       setSubmittedSuccess(true);
       setFormData({
         name: '',

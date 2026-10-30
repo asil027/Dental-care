@@ -41,9 +41,53 @@ export default function DashboardHome() {
     setIsLoading(true);
     try {
       const res = await apiRequest('/stats/overview');
-      setData(res);
+
+      // Merge local appointments
+      const localAppts = JSON.parse(localStorage.getItem('dc_submitted_appointments') || '[]');
+      const serverAppts = res.upcomingAppointments || [];
+      const serverCodes = new Set(serverAppts.map(a => a.appointment_code || a.id));
+      const missingAppts = localAppts.filter(a => !serverCodes.has(a.appointment_code || a.id));
+      const mergedAppts = [...missingAppts, ...serverAppts];
+
+      // Merge local contact messages
+      const localMsgs = JSON.parse(localStorage.getItem('dc_submitted_messages') || '[]');
+      const serverMsgs = res.recentMessages || [];
+      const serverMsgKeys = new Set(serverMsgs.map(m => m.id || `${m.email}-${m.created_at}`));
+      const missingMsgs = localMsgs.filter(m => !serverMsgKeys.has(m.id || `${m.email}-${m.created_at}`));
+      const mergedMsgs = [...missingMsgs, ...serverMsgs];
+
+      // Merge local patient reviews
+      const localRevs = JSON.parse(localStorage.getItem('dc_submitted_reviews') || '[]');
+      const serverRevs = res.recentTestimonials || [];
+      const serverRevIds = new Set(serverRevs.map(r => r.id));
+      const missingRevs = localRevs.filter(r => !serverRevIds.has(r.id));
+      const mergedRevs = [...missingRevs, ...serverRevs];
+
+      const mergedData = {
+        ...res,
+        upcomingAppointments: mergedAppts,
+        recentMessages: mergedMsgs,
+        recentTestimonials: mergedRevs,
+        stats: {
+          ...res.stats,
+          totalAppointments: (res.stats.totalAppointments || 0) + missingAppts.length,
+          unreadMessages: (res.stats.unreadMessages || 0) + missingMsgs.filter(m => !m.is_read).length,
+          totalMessages: (res.stats.totalMessages || 0) + missingMsgs.length,
+          pendingTestimonials: (res.stats.pendingTestimonials || 0) + missingRevs.filter(r => !r.is_approved).length,
+          totalTestimonials: (res.stats.totalTestimonials || 0) + missingRevs.length
+        }
+      };
+
+      setData(mergedData);
+      localStorage.setItem('dc_cached_dashboard', JSON.stringify(mergedData));
     } catch (err) {
       console.error('Failed to load dashboard overview:', err);
+      const cached = localStorage.getItem('dc_cached_dashboard');
+      if (cached) {
+        try {
+          setData(JSON.parse(cached));
+        } catch (e) {}
+      }
     } finally {
       setIsLoading(false);
     }
@@ -51,7 +95,12 @@ export default function DashboardHome() {
 
   const handleMarkMessageRead = async (id) => {
     try {
-      await apiRequest(`/messages/${id}/read`, { method: 'PATCH' });
+      await apiRequest(`/messages/${id}/read`, { method: 'PATCH' }).catch(() => {});
+      try {
+        const localMsgs = JSON.parse(localStorage.getItem('dc_submitted_messages') || '[]');
+        const updated = localMsgs.map(m => (m.id === id ? { ...m, is_read: 1 } : m));
+        localStorage.setItem('dc_submitted_messages', JSON.stringify(updated));
+      } catch (e) {}
       fetchStats();
       if (selectedMessage && selectedMessage.id === id) {
         setSelectedMessage((prev) => ({ ...prev, is_read: 1 }));
@@ -66,7 +115,12 @@ export default function DashboardHome() {
       await apiRequest(`/appointments/${id}/status`, {
         method: 'PATCH',
         body: JSON.stringify({ status })
-      });
+      }).catch(() => {});
+      try {
+        const localAppts = JSON.parse(localStorage.getItem('dc_submitted_appointments') || '[]');
+        const updated = localAppts.map(a => (a.id === id || a.appointment_code === id ? { ...a, status } : a));
+        localStorage.setItem('dc_submitted_appointments', JSON.stringify(updated));
+      } catch (e) {}
       fetchStats();
       if (selectedAppointment && selectedAppointment.id === id) {
         setSelectedAppointment((prev) => ({ ...prev, status }));

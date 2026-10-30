@@ -106,6 +106,20 @@ export default function QuickBooking({ doctors = [], services = [], settings = {
         body: JSON.stringify(formData)
       });
 
+      // Save locally to ensure immediate persistence across reloads
+      try {
+        const localAppts = JSON.parse(localStorage.getItem('dc_submitted_appointments') || '[]');
+        const newRecord = res.appointment || {
+          id: Date.now(),
+          ...formData,
+          status: 'Pending',
+          appointment_code: `DC-${Date.now().toString().slice(-4)}`,
+          created_at: new Date().toISOString()
+        };
+        localAppts.unshift(newRecord);
+        localStorage.setItem('dc_submitted_appointments', JSON.stringify(localAppts));
+      } catch (e) {}
+
       setConfirmationData(res.appointment);
       if (onBookingSuccess) onBookingSuccess(res.appointment);
 

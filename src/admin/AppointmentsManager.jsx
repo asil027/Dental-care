@@ -101,9 +101,15 @@ export default function AppointmentsManager() {
       if (dateFilter) url += `date=${encodeURIComponent(dateFilter)}&`;
 
       const res = await apiRequest(url);
-      setAppointments(res.appointments || []);
+      const serverAppts = res.appointments || [];
+      const localAppts = JSON.parse(localStorage.getItem('dc_submitted_appointments') || '[]');
+      const serverCodes = new Set(serverAppts.map(a => a.appointment_code || a.id));
+      const missingAppts = localAppts.filter(a => !serverCodes.has(a.appointment_code || a.id));
+      setAppointments([...missingAppts, ...serverAppts]);
     } catch (err) {
       console.error('Fetch appointments error:', err);
+      const localAppts = JSON.parse(localStorage.getItem('dc_submitted_appointments') || '[]');
+      if (localAppts.length > 0) setAppointments(localAppts);
     } finally {
       setIsLoading(false);
     }
@@ -114,7 +120,12 @@ export default function AppointmentsManager() {
       await apiRequest(`/appointments/${id}/status`, {
         method: 'PATCH',
         body: JSON.stringify({ status })
-      });
+      }).catch(() => {});
+      try {
+        const localAppts = JSON.parse(localStorage.getItem('dc_submitted_appointments') || '[]');
+        const updated = localAppts.map(a => (a.id === id || a.appointment_code === id ? { ...a, status } : a));
+        localStorage.setItem('dc_submitted_appointments', JSON.stringify(updated));
+      } catch (e) {}
       fetchAppointments();
       if (viewDetailsAppt && viewDetailsAppt.id === id) {
         setViewDetailsAppt((prev) => ({ ...prev, status }));

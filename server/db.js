@@ -47,7 +47,8 @@ if (DatabaseSync) {
 }
 
 if (!db) {
-  console.log('[DB] Using high-availability fallback store');
+  console.log('[DB] Using high-availability fallback store with disk persistence');
+  
   const store = {
     admins: [{
       id: 1,
@@ -59,12 +60,225 @@ if (!db) {
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
       created_at: new Date().toISOString()
     }],
-    clinic_settings: [],
+    clinic_settings: [
+      { key: 'clinic_name', value: 'Dental Care' },
+      { key: 'tagline', value: 'Healthy Smiles, Brighter Future' },
+      { key: 'phone', value: '+92 42 3578 9000' },
+      { key: 'emergency_phone', value: '+92 300 123 4567' },
+      { key: 'email', value: 'contact@dentalcareclinic.pk' },
+      { key: 'address', value: 'dental care ,street 15 ,saifabad no 1,punjab, Pakistan' },
+      { key: 'operating_days', value: 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday' },
+      { key: 'weekly_holiday', value: 'Sunday' },
+      { key: 'working_hours_weekday', value: '11:00 AM – 12:00 AM' },
+      { key: 'working_hours_saturday', value: '11:00 AM – 12:00 AM' },
+      { key: 'working_hours_sunday', value: 'Closed' },
+      { key: 'operating_start_time', value: '11:00 AM' },
+      { key: 'operating_end_time', value: '12:00 AM' },
+      { key: 'currency', value: 'PKR' },
+      { key: 'currency_symbol', value: 'PKR ' },
+      { key: 'slot_duration', value: '30' }
+    ],
     cms_content: [],
-    doctors: [],
-    services: [],
-    patients: [],
-    appointments: [],
+    doctors: [
+      {
+        id: 1,
+        name: 'Dr. Ayesha Khan',
+        qualification: 'BDS, RDS, Certified Dental Surgeon',
+        specialization: 'General Dentist',
+        experience_years: 5,
+        rating: 4.9,
+        reviews_count: 120,
+        photo: 'https://images.unsplash.com/photo-1594824813589-a292854c86e0?auto=format&fit=crop&w=600&q=80',
+        bio: 'Dr. Ayesha Khan brings 5+ years of specialized clinical experience in preventive care, tooth restorations, and comprehensive dental examinations.',
+        consultation_fee: 2500,
+        available_days: 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday',
+        available_start_time: '11:00',
+        available_end_time: '23:59',
+        is_active: 1,
+        order_index: 1
+      },
+      {
+        id: 2,
+        name: 'Dr. Ahmed Raza',
+        qualification: 'BDS, FCPS (Orthodontics), Invisalign Gold Provider',
+        specialization: 'Orthodontist',
+        experience_years: 7,
+        rating: 4.8,
+        reviews_count: 96,
+        photo: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=600&q=80',
+        bio: 'Dr. Ahmed Raza specializes in correcting misaligned bites, clear aligners (Invisalign), and modern aesthetic ceramic braces for children and adults.',
+        consultation_fee: 3000,
+        available_days: 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday',
+        available_start_time: '11:00',
+        available_end_time: '23:59',
+        is_active: 1,
+        order_index: 2
+      },
+      {
+        id: 3,
+        name: 'Dr. Sana Malik',
+        qualification: 'BDS, M.Sc Aesthetic Dentistry (London)',
+        specialization: 'Cosmetic Dentist',
+        experience_years: 6,
+        rating: 4.9,
+        reviews_count: 110,
+        photo: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=600&q=80',
+        bio: 'Dr. Sana Malik transforms smiles with porcelain laminates, composite veneers, laser teeth whitening, and complete digital smile design.',
+        consultation_fee: 3500,
+        available_days: 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday',
+        available_start_time: '11:00',
+        available_end_time: '23:59',
+        is_active: 1,
+        order_index: 3
+      },
+      {
+        id: 4,
+        name: 'Dr. Faisal Butt',
+        qualification: 'BDS, FCPS (Operative Dentistry & Endodontics)',
+        specialization: 'Endodontist',
+        experience_years: 8,
+        rating: 4.8,
+        reviews_count: 87,
+        photo: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=600&q=80',
+        bio: 'Dr. Faisal Butt is an expert endodontist focused on painless root canal therapy, rotary instrumentation, and apex re-treatments to preserve teeth.',
+        consultation_fee: 3000,
+        available_days: 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday',
+        available_start_time: '11:00',
+        available_end_time: '23:59',
+        is_active: 1,
+        order_index: 4
+      }
+    ],
+    services: [
+      {
+        id: 1,
+        name: 'General Dentistry',
+        icon: 'Stethoscope',
+        short_desc: 'Checkups, cleaning, fillings & more.',
+        full_desc: 'Comprehensive dental health checkups, deep ultrasonic scaling, preventive fluoride therapy, tooth-colored composite restorations, and digital dental exams.',
+        price: 2500,
+        duration_mins: 30,
+        image: 'https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=800&q=80',
+        is_active: 1,
+        order_index: 1
+      },
+      {
+        id: 2,
+        name: 'Cosmetic Dentistry',
+        icon: 'Sparkles',
+        short_desc: 'Veneers, bonding & smile design.',
+        full_desc: 'Custom porcelain veneers, direct composite bonding, gum contouring, and aesthetic smile design to give you a natural, radiant smile.',
+        price: 3500,
+        duration_mins: 45,
+        image: 'https://images.unsplash.com/photo-1606811841689-23dfddce3e95?auto=format&fit=crop&w=800&q=80',
+        is_active: 1,
+        order_index: 2
+      },
+      {
+        id: 3,
+        name: 'Orthodontics & Aligners',
+        icon: 'Smile',
+        short_desc: 'Invisalign & modern ceramic braces.',
+        full_desc: 'Discreet clear aligners and modern ceramic braces to correct crooked teeth, gaps, and bite issues with comfortable, customized adjustments.',
+        price: 3000,
+        duration_mins: 45,
+        image: 'https://images.unsplash.com/photo-1598256989800-fe5f95da9787?auto=format&fit=crop&w=800&q=80',
+        is_active: 1,
+        order_index: 3
+      },
+      {
+        id: 4,
+        name: 'Root Canal Treatment',
+        icon: 'Activity',
+        short_desc: 'Painless single-visit endodontics.',
+        full_desc: 'Gentle, modern root canal therapy using rotary instruments and digital apex locators to eliminate infection, stop pain, and preserve your natural tooth.',
+        price: 3000,
+        duration_mins: 60,
+        image: 'https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=800&q=80',
+        is_active: 1,
+        order_index: 4
+      }
+    ],
+    patients: [
+      { id: 1, name: 'Areeba Khan', email: 'areeba.khan@gmail.com', phone: '+92 301 5551234', total_visits: 3, created_at: new Date().toISOString() },
+      { id: 2, name: 'Usman Ali', email: 'usman.ali@outlook.com', phone: '+92 321 8884321', total_visits: 5, created_at: new Date().toISOString() },
+      { id: 3, name: 'Fatima Noor', email: 'fatima.noor@yahoo.com', phone: '+92 333 4447788', total_visits: 1, created_at: new Date().toISOString() },
+      { id: 4, name: 'Hassan Raza', email: 'hassan.raza@gmail.com', phone: '+92 345 6661122', total_visits: 2, created_at: new Date().toISOString() }
+    ],
+    appointments: [
+      {
+        id: 1,
+        appointment_code: 'DC-2026-001',
+        patient_id: 1,
+        patient_name: 'Areeba Khan',
+        patient_email: 'areeba.khan@gmail.com',
+        patient_phone: '+92 301 5551234',
+        doctor_id: 1,
+        doctor_name: 'Dr. Ayesha Khan',
+        service_id: 1,
+        service_name: 'General Dentistry',
+        appointment_date: '2026-10-31',
+        appointment_time: '11:30 AM',
+        notes: 'Routine checkup and ultrasonic cleaning',
+        status: 'Confirmed',
+        fee: 2500,
+        created_at: new Date().toISOString()
+      },
+      {
+        id: 2,
+        appointment_code: 'DC-2026-002',
+        patient_id: 2,
+        patient_name: 'Usman Ali',
+        patient_email: 'usman.ali@outlook.com',
+        patient_phone: '+92 321 8884321',
+        doctor_id: 2,
+        doctor_name: 'Dr. Ahmed Raza',
+        service_id: 3,
+        service_name: 'Orthodontics',
+        appointment_date: '2026-10-31',
+        appointment_time: '02:00 PM',
+        notes: 'Braces adjustment and wire tightening',
+        status: 'Confirmed',
+        fee: 3000,
+        created_at: new Date().toISOString()
+      },
+      {
+        id: 3,
+        appointment_code: 'DC-2026-003',
+        patient_id: 3,
+        patient_name: 'Fatima Noor',
+        patient_email: 'fatima.noor@yahoo.com',
+        patient_phone: '+92 333 4447788',
+        doctor_id: 3,
+        doctor_name: 'Dr. Sana Malik',
+        service_id: 2,
+        service_name: 'Cosmetic Dentistry',
+        appointment_date: '2026-11-01',
+        appointment_time: '04:30 PM',
+        notes: 'First cosmetic smile analysis and shade check',
+        status: 'Pending',
+        fee: 3500,
+        created_at: new Date().toISOString()
+      },
+      {
+        id: 4,
+        appointment_code: 'DC-2026-004',
+        patient_id: 4,
+        patient_name: 'Hassan Raza',
+        patient_email: 'hassan.raza@gmail.com',
+        patient_phone: '+92 345 6661122',
+        doctor_id: 4,
+        doctor_name: 'Dr. Faisal Butt',
+        service_id: 4,
+        service_name: 'Root Canal Treatment',
+        appointment_date: '2026-11-01',
+        appointment_time: '07:00 PM',
+        notes: 'Follow up evaluation after molar treatment',
+        status: 'Confirmed',
+        fee: 3000,
+        created_at: new Date().toISOString()
+      }
+    ],
     consultations: [],
     testimonials: [
       {
@@ -102,8 +316,63 @@ if (!db) {
     blog_posts: [],
     faqs: [],
     gallery: [],
-    contact_messages: []
+    contact_messages: [
+      {
+        id: 1,
+        name: 'Bilal Tariq',
+        email: 'bilal.tariq@gmail.com',
+        phone: '+92 312 7778899',
+        subject: 'Dental Implant Consultation',
+        message: 'Hello, I want to know about the cost and procedure time for a single tooth dental implant. Is sedation available?',
+        is_read: 0,
+        created_at: '2026-10-30 18:45:00'
+      },
+      {
+        id: 2,
+        name: 'Maham Siddiqui',
+        email: 'maham.siddiqui@gmail.com',
+        phone: '+92 331 2223344',
+        subject: 'Teeth Whitening Session',
+        message: 'Can I book an evening slot for laser teeth whitening this Saturday? Also do you accept Jubilee insurance?',
+        is_read: 0,
+        created_at: '2026-10-30 19:15:00'
+      }
+    ]
   };
+
+  const storeFile = process.env.VERCEL 
+    ? path.join('/tmp', 'dental_store_v2.json') 
+    : path.join(__dirname, '..', 'data', 'dental_store_v2.json');
+
+  function saveStoreToFile() {
+    try {
+      fs.writeFileSync(storeFile, JSON.stringify(store, null, 2), 'utf8');
+    } catch (err) {
+      console.warn('[DB] Could not write store file:', err.message);
+    }
+  }
+
+  function loadStoreFromFile() {
+    try {
+      if (fs.existsSync(storeFile)) {
+        const content = fs.readFileSync(storeFile, 'utf8');
+        if (content) {
+          const loaded = JSON.parse(content);
+          if (loaded && typeof loaded === 'object') {
+            for (const key of Object.keys(loaded)) {
+              if (Array.isArray(loaded[key]) && loaded[key].length > 0) {
+                store[key] = loaded[key];
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[DB] Could not load store file:', err.message);
+    }
+  }
+
+  loadStoreFromFile();
 
   db = {
     exec: () => {},
@@ -127,6 +396,45 @@ if (!db) {
             }
             return store.testimonials[0] || null;
           }
+          if (cleanSql.includes('from appointments')) {
+            if (cleanSql.includes('where id = ?')) {
+              return store.appointments.find(a => a.id == params[0]) || null;
+            }
+            if (cleanSql.includes('where appointment_code = ?')) {
+              return store.appointments.find(a => a.appointment_code === params[0]) || null;
+            }
+          }
+          if (cleanSql.includes('from contact_messages')) {
+            if (cleanSql.includes('where id = ?')) {
+              return store.contact_messages.find(m => m.id == params[0]) || null;
+            }
+          }
+          if (cleanSql.includes('from patients')) {
+            if (cleanSql.includes('where phone = ?')) {
+              return store.patients.find(p => p.phone === params[0]) || null;
+            }
+            if (cleanSql.includes('where id = ?')) {
+              return store.patients.find(p => p.id == params[0]) || null;
+            }
+          }
+          if (cleanSql.includes('from doctors')) {
+            if (params.length > 0) {
+              return store.doctors.find(d => d.id == params[0]) || null;
+            }
+            return store.doctors[0] || null;
+          }
+          if (cleanSql.includes('from services')) {
+            if (params.length > 0) {
+              return store.services.find(s => s.id == params[0]) || null;
+            }
+            return store.services[0] || null;
+          }
+          if (cleanSql.includes('sum(fee)')) {
+            const rev = store.appointments
+              .filter(a => a.status === 'Confirmed' || a.status === 'Completed')
+              .reduce((sum, a) => sum + (Number(a.fee) || 0), 0);
+            return { revenue: rev };
+          }
           if (cleanSql.includes('select count(*)')) {
             if (cleanSql.includes('from testimonials')) {
               if (cleanSql.includes('is_approved = 0')) {
@@ -144,8 +452,17 @@ if (!db) {
               return { count: store.contact_messages.length };
             }
             if (cleanSql.includes('from appointments')) {
-              if (cleanSql.includes("status = 'pending'") || cleanSql.includes('status = ?')) {
+              if (cleanSql.includes("status = 'pending'")) {
                 return { count: store.appointments.filter(a => a.status === 'Pending').length };
+              }
+              if (cleanSql.includes("status = 'confirmed'")) {
+                return { count: store.appointments.filter(a => a.status === 'Confirmed').length };
+              }
+              if (cleanSql.includes("status = 'completed'")) {
+                return { count: store.appointments.filter(a => a.status === 'Completed').length };
+              }
+              if (cleanSql.includes('appointment_date = ?') && params.length > 0) {
+                return { count: store.appointments.filter(a => a.appointment_date === params[0]).length };
               }
               return { count: store.appointments.length };
             }
@@ -173,6 +490,16 @@ if (!db) {
             }
             return [...store.testimonials];
           }
+          if (cleanSql.includes('from contact_messages')) {
+            return [...store.contact_messages];
+          }
+          if (cleanSql.includes('from appointments')) {
+            let list = [...store.appointments];
+            if (cleanSql.includes('where doctor_id = ? and appointment_date = ?') && params.length >= 2) {
+              return list.filter(a => a.doctor_id == params[0] && a.appointment_date === params[1] && a.status !== 'Cancelled' && a.status !== 'Rejected');
+            }
+            return list;
+          }
           for (const table of Object.keys(store)) {
             if (cleanSql.includes(`from ${table}`)) {
               return [...store[table]];
@@ -181,6 +508,103 @@ if (!db) {
           return [];
         },
         run: (...params) => {
+          if (cleanSql.includes('insert into appointments')) {
+            const item = {
+              id: store.appointments.length + 1,
+              appointment_code: params[0] || `DC-${Date.now().toString().slice(-4)}`,
+              patient_id: params[1] || 1,
+              patient_name: params[2] || 'Patient',
+              patient_email: params[3] || '',
+              patient_phone: params[4] || '',
+              doctor_id: params[5] || 1,
+              doctor_name: params[6] || 'Dr. Ayesha Khan',
+              service_id: params[7] || 1,
+              service_name: params[8] || 'General Dentistry',
+              appointment_date: params[9] || new Date().toISOString().slice(0, 10),
+              appointment_time: params[10] || '11:30 AM',
+              notes: params[11] || '',
+              status: params[12] || 'Pending',
+              fee: parseInt(params[13], 10) || 2500,
+              created_at: new Date().toISOString()
+            };
+            store.appointments.unshift(item);
+            saveStoreToFile();
+            return { changes: 1, lastInsertRowid: item.id };
+          }
+          if (cleanSql.includes('update appointments')) {
+            if (cleanSql.includes('status = ?')) {
+              const item = store.appointments.find(a => a.id == params[1] || a.appointment_code == params[1]);
+              if (item) item.status = params[0];
+            } else if (cleanSql.includes('appointment_date = ?')) {
+              const item = store.appointments.find(a => a.id == params[3] || a.id == params[params.length - 1]);
+              if (item) {
+                item.appointment_date = params[0];
+                item.appointment_time = params[1];
+                if (params[2]) item.doctor_id = params[2];
+              }
+            }
+            saveStoreToFile();
+            return { changes: 1 };
+          }
+          if (cleanSql.includes('delete from appointments')) {
+            const idx = store.appointments.findIndex(a => a.id == params[0]);
+            if (idx !== -1) store.appointments.splice(idx, 1);
+            saveStoreToFile();
+            return { changes: 1 };
+          }
+          if (cleanSql.includes('insert into contact_messages')) {
+            const item = {
+              id: store.contact_messages.length + 1,
+              name: params[0],
+              email: params[1],
+              phone: params[2] || '',
+              subject: params[3] || 'General Inquiry',
+              message: params[4],
+              is_read: 0,
+              created_at: new Date().toISOString().replace('T', ' ').slice(0, 19)
+            };
+            store.contact_messages.unshift(item);
+            saveStoreToFile();
+            return { changes: 1, lastInsertRowid: item.id };
+          }
+          if (cleanSql.includes('update contact_messages')) {
+            const targetId = params.length > 1 ? params[1] : params[0];
+            const item = store.contact_messages.find(m => m.id == targetId);
+            if (item) {
+              if (params.length > 1) item.is_read = params[0];
+              else item.is_read = 1;
+            }
+            saveStoreToFile();
+            return { changes: 1 };
+          }
+          if (cleanSql.includes('delete from contact_messages')) {
+            const idx = store.contact_messages.findIndex(m => m.id == params[0]);
+            if (idx !== -1) store.contact_messages.splice(idx, 1);
+            saveStoreToFile();
+            return { changes: 1 };
+          }
+          if (cleanSql.includes('insert into patients')) {
+            const item = {
+              id: store.patients.length + 1,
+              name: params[0],
+              email: params[1],
+              phone: params[2],
+              total_visits: 1,
+              created_at: new Date().toISOString()
+            };
+            store.patients.unshift(item);
+            saveStoreToFile();
+            return { changes: 1, lastInsertRowid: item.id };
+          }
+          if (cleanSql.includes('update patients')) {
+            const item = store.patients.find(p => p.id == params[1] || p.id == params[params.length - 1]);
+            if (item) {
+              if (params[0]) item.email = params[0];
+              item.total_visits = (item.total_visits || 0) + 1;
+            }
+            saveStoreToFile();
+            return { changes: 1 };
+          }
           if (cleanSql.includes('insert into testimonials')) {
             const item = {
               id: store.testimonials.length + 1,
@@ -193,16 +617,19 @@ if (!db) {
               created_at: new Date().toISOString()
             };
             store.testimonials.unshift(item);
+            saveStoreToFile();
             return { changes: 1, lastInsertRowid: item.id };
           }
           if (cleanSql.includes('update testimonials') && cleanSql.includes('is_approved')) {
             const item = store.testimonials.find(t => t.id == params[1]);
             if (item) item.is_approved = params[0];
+            saveStoreToFile();
             return { changes: 1 };
           }
           if (cleanSql.includes('delete from testimonials')) {
             const idx = store.testimonials.findIndex(t => t.id == params[0]);
             if (idx !== -1) store.testimonials.splice(idx, 1);
+            saveStoreToFile();
             return { changes: 1 };
           }
           if (cleanSql.includes('insert into admins')) {
@@ -216,23 +643,27 @@ if (!db) {
               avatar: params[5]
             };
             store.admins.push(newAdmin);
+            saveStoreToFile();
             return { changes: 1, lastInsertRowid: newAdmin.id };
           }
           if (cleanSql.includes('insert into clinic_settings')) {
             const existing = store.clinic_settings.find(s => s.key === params[0]);
             if (existing) { existing.value = params[1]; }
             else { store.clinic_settings.push({ key: params[0], value: params[1] }); }
+            saveStoreToFile();
             return { changes: 1 };
           }
           if (cleanSql.includes('update clinic_settings')) {
             const s = store.clinic_settings.find(item => item.key === params[1]);
             if (s) s.value = params[0];
+            saveStoreToFile();
             return { changes: 1 };
           }
           if (cleanSql.includes('insert into cms_content')) {
             const existing = store.cms_content.find(c => c.section_key === params[0]);
             if (existing) { existing.data_json = params[1]; }
             else { store.cms_content.push({ section_key: params[0], data_json: params[1] }); }
+            saveStoreToFile();
             return { changes: 1 };
           }
           for (const table of Object.keys(store)) {
@@ -240,6 +671,7 @@ if (!db) {
               const record = { id: store[table].length + 1 };
               params.forEach((p, idx) => { record[`col_${idx}`] = p; });
               store[table].push(record);
+              saveStoreToFile();
               return { changes: 1, lastInsertRowid: record.id };
             }
           }

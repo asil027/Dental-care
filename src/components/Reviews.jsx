@@ -59,7 +59,7 @@ export default function Reviews({ testimonials = [], onReviewSubmitted }) {
     setErrorMessage('');
 
     try {
-      await apiRequest('/testimonials/submit', {
+      const res = await apiRequest('/testimonials/submit', {
         method: 'POST',
         body: JSON.stringify({
           patient_name: formData.patient_name.trim(),
@@ -68,6 +68,22 @@ export default function Reviews({ testimonials = [], onReviewSubmitted }) {
           review_text: formData.review_text.trim()
         })
       });
+
+      // Save locally to ensure immediate persistence across reloads
+      try {
+        const localRevs = JSON.parse(localStorage.getItem('dc_submitted_reviews') || '[]');
+        const newRecord = res.testimonial || {
+          id: Date.now(),
+          patient_name: formData.patient_name.trim(),
+          rating: formData.rating,
+          treatment: formData.treatment,
+          review_text: formData.review_text.trim(),
+          is_approved: 0,
+          created_at: new Date().toISOString()
+        };
+        localRevs.unshift(newRecord);
+        localStorage.setItem('dc_submitted_reviews', JSON.stringify(localRevs));
+      } catch (e) {}
 
       setIsSubmitted(true);
       setFormData({

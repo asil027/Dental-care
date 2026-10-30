@@ -33,9 +33,15 @@ export default function MessagesManager() {
     setIsLoading(true);
     try {
       const res = await apiRequest('/messages');
-      setMessages(res.messages || []);
+      const serverMsgs = res.messages || [];
+      const localMsgs = JSON.parse(localStorage.getItem('dc_submitted_messages') || '[]');
+      const serverMsgKeys = new Set(serverMsgs.map(m => m.id || `${m.email}-${m.created_at}`));
+      const missingMsgs = localMsgs.filter(m => !serverMsgKeys.has(m.id || `${m.email}-${m.created_at}`));
+      setMessages([...missingMsgs, ...serverMsgs]);
     } catch (err) {
       console.error('Failed to fetch contact messages:', err);
+      const localMsgs = JSON.parse(localStorage.getItem('dc_submitted_messages') || '[]');
+      if (localMsgs.length > 0) setMessages(localMsgs);
     } finally {
       setIsLoading(false);
     }
@@ -43,7 +49,12 @@ export default function MessagesManager() {
 
   const handleToggleRead = async (id) => {
     try {
-      await apiRequest(`/messages/${id}/toggle-read`, { method: 'PATCH' });
+      await apiRequest(`/messages/${id}/toggle-read`, { method: 'PATCH' }).catch(() => {});
+      try {
+        const localMsgs = JSON.parse(localStorage.getItem('dc_submitted_messages') || '[]');
+        const updated = localMsgs.map(m => (m.id === id ? { ...m, is_read: m.is_read ? 0 : 1 } : m));
+        localStorage.setItem('dc_submitted_messages', JSON.stringify(updated));
+      } catch (e) {}
       fetchMessages();
       if (selectedMessage && selectedMessage.id === id) {
         setSelectedMessage((prev) => ({ ...prev, is_read: prev.is_read ? 0 : 1 }));
@@ -55,7 +66,12 @@ export default function MessagesManager() {
 
   const handleMarkAsRead = async (id) => {
     try {
-      await apiRequest(`/messages/${id}/read`, { method: 'PATCH' });
+      await apiRequest(`/messages/${id}/read`, { method: 'PATCH' }).catch(() => {});
+      try {
+        const localMsgs = JSON.parse(localStorage.getItem('dc_submitted_messages') || '[]');
+        const updated = localMsgs.map(m => (m.id === id ? { ...m, is_read: 1 } : m));
+        localStorage.setItem('dc_submitted_messages', JSON.stringify(updated));
+      } catch (e) {}
       fetchMessages();
       if (selectedMessage && selectedMessage.id === id) {
         setSelectedMessage((prev) => ({ ...prev, is_read: 1 }));
