@@ -12,7 +12,8 @@
   },
   "functions": {
     "api/index.js": {
-      "includeFiles": "data/**"
+      "includeFiles": "data/**",
+      "excludeFiles": "{dist/**,src/**}"
     }
   },
   "rewrites": [

@@ -79,13 +79,15 @@ for (const [prefix, r] of routeList) {
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
 app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
 
-// Serve frontend build if exists
-const distDir = path.join(__dirname, '..', 'dist');
-if (fs.existsSync(distDir)) {
-  app.use(express.static(distDir));
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(distDir, 'index.html'));
-  });
+// Serve frontend build if exists (standalone local mode only, Vercel handles static assets directly)
+if (!process.env.VERCEL) {
+  const distDir = path.join(__dirname, '..', 'dist');
+  if (fs.existsSync(distDir)) {
+    app.use(express.static(distDir));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(distDir, 'index.html'));
+    });
+  }
 }
 
 // Unhandled error handler
