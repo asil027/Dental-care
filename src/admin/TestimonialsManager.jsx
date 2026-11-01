@@ -27,9 +27,15 @@ export default function TestimonialsManager() {
     setIsLoading(true);
     try {
       const res = await apiRequest('/testimonials/all');
-      setTestimonials(res.testimonials || []);
+      const serverList = res.testimonials || [];
+      const localRevs = JSON.parse(localStorage.getItem('dc_submitted_reviews') || '[]');
+      const serverIds = new Set(serverList.map(r => r.id));
+      const missingRevs = localRevs.filter(r => !serverIds.has(r.id));
+      setTestimonials([...missingRevs, ...serverList]);
     } catch (err) {
       console.error('Fetch testimonials error:', err);
+      const localRevs = JSON.parse(localStorage.getItem('dc_submitted_reviews') || '[]');
+      if (localRevs.length > 0) setTestimonials(localRevs);
     } finally {
       setIsLoading(false);
     }
@@ -48,9 +54,9 @@ export default function TestimonialsManager() {
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase();
       return (
-        t.patient_name.toLowerCase().includes(q) ||
+        (t.patient_name && t.patient_name.toLowerCase().includes(q)) ||
         (t.treatment && t.treatment.toLowerCase().includes(q)) ||
-        t.review_text.toLowerCase().includes(q)
+        (t.review_text && t.review_text.toLowerCase().includes(q))
       );
     });
 
@@ -82,7 +88,12 @@ export default function TestimonialsManager() {
 
   const handleToggleApprove = async (id) => {
     try {
-      await apiRequest(`/testimonials/${id}/toggle-approve`, { method: 'PATCH' });
+      await apiRequest(`/testimonials/${id}/toggle-approve`, { method: 'PATCH' }).catch(() => {});
+      try {
+        const localRevs = JSON.parse(localStorage.getItem('dc_submitted_reviews') || '[]');
+        const updated = localRevs.map(r => (r.id === id ? { ...r, is_approved: r.is_approved ? 0 : 1 } : r));
+        localStorage.setItem('dc_submitted_reviews', JSON.stringify(updated));
+      } catch (e) {}
       fetchTestimonials();
     } catch (err) {
       alert(err.message || 'Toggle failed');
@@ -92,7 +103,12 @@ export default function TestimonialsManager() {
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this patient review permanently?')) return;
     try {
-      await apiRequest(`/testimonials/${id}`, { method: 'DELETE' });
+      await apiRequest(`/testimonials/${id}`, { method: 'DELETE' }).catch(() => {});
+      try {
+        const localRevs = JSON.parse(localStorage.getItem('dc_submitted_reviews') || '[]');
+        const updated = localRevs.filter(r => r.id !== id);
+        localStorage.setItem('dc_submitted_reviews', JSON.stringify(updated));
+      } catch (e) {}
       fetchTestimonials();
     } catch (err) {
       alert(err.message || 'Delete failed');

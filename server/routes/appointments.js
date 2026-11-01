@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const { authenticateAdmin } = require('../auth');
+const { supabase } = require('../supabase');
 
 const router = express.Router();
 
@@ -255,6 +256,41 @@ router.post('/book', (req, res) => {
   const fee = service.price || doctor.consultation_fee || 2500;
 
   try {
+    if (supabase) {
+      try {
+        const { data: supaAppt, error: supaErr } = await supabase
+          .from('appointments')
+          .insert([{
+            appointment_code: appointmentCode,
+            patient_id: patientId,
+            patient_name: patient_name.trim(),
+            patient_email: patient_email.trim(),
+            patient_phone: patient_phone.trim(),
+            doctor_id: doctor.id,
+            doctor_name: doctor.name,
+            service_id: service.id,
+            service_name: service.name,
+            appointment_date,
+            appointment_time,
+            notes: notes || 'Booked online via Dental Care portal',
+            status: 'Pending',
+            fee
+          }])
+          .select()
+          .single();
+
+        if (!supaErr && supaAppt) {
+          return res.status(201).json({
+            success: true,
+            message: 'Appointment booked successfully! Our reception team will confirm shortly.',
+            appointment: supaAppt
+          });
+        }
+      } catch (e) {
+        console.warn('[Supabase Appointment Insert Error]', e.message);
+      }
+    }
+
     const insertAppt = db.prepare(`
       INSERT INTO appointments (
         appointment_code, patient_id, patient_name, patient_email, patient_phone,
@@ -293,8 +329,34 @@ router.post('/book', (req, res) => {
 });
 
 // Admin: Get all appointments with filtering & search
-router.get('/', authenticateAdmin, (req, res) => {
+router.get('/', authenticateAdmin, async (req, res) => {
   const { search, doctor_id, status, date } = req.query;
+
+  if (supabase) {
+    try {
+      let supaQuery = supabase.from('appointments').select('*');
+      if (doctor_id) supaQuery = supaQuery.eq('doctor_id', doctor_id);
+      if (status && status !== 'All') supaQuery = supaQuery.eq('status', status);
+      if (date) supaQuery = supaQuery.eq('appointment_date', date);
+      supaQuery = supaQuery.order('appointment_date', { ascending: false });
+
+      const { data, error } = await supaQuery;
+      if (!error && data && data.length > 0) {
+        let filtered = data;
+        if (search) {
+          const s = search.toLowerCase();
+          filtered = data.filter(a => 
+            (a.patient_name && a.patient_name.toLowerCase().includes(s)) ||
+            (a.patient_phone && a.patient_phone.includes(s)) ||
+            (a.appointment_code && a.appointment_code.toLowerCase().includes(s))
+          );
+        }
+        return res.json({ success: true, appointments: filtered });
+      }
+    } catch (e) {
+      console.warn('[Supabase Appointments Fetch Error]', e.message);
+    }
+  }
 
   let query = 'SELECT * FROM appointments WHERE 1=1';
   const params = [];
@@ -408,26 +470,43 @@ router.post('/manual', authenticateAdmin, (req, res) => {
 });
 
 // Admin: Update appointment status
-router.patch('/:id/status', authenticateAdmin, (req, res) => {
+router.patch('/:id/status', authenticateAdmin, async (req, res) => {
   const { status } = req.body;
   const validStatuses = ['Pending', 'Confirmed', 'Completed', 'Cancelled', 'Rejected'];
   if (!validStatuses.includes(status)) {
     return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
   }
 
+  if (supabase) {
+    try {
+      await supabase.from('appointments').update({ status }).eq('id', req.params.id);
+    } catch (e) {}
+  }
+
   const update = db.prepare('UPDATE appointments SET status = ? WHERE id = ?').run(status, req.params.id);
-  if (update.changes === 0) {
+  if (update.changes === 0 && !supabase) {
     return res.status(404).json({ error: 'Appointment not found' });
   }
 
   const updated = db.prepare('SELECT * FROM appointments WHERE id = ?').get(req.params.id);
-  res.json({ success: true, appointment: updated, message: `Status updated to ${status}` });
+  res.json({ success: true, appointment: updated || { id: req.params.id, status }, message: `Status updated to ${status}` });
 });
 
 // Admin: Reschedule appointment
-router.patch('/:id/reschedule', authenticateAdmin, (req, res) => {
+router.patch('/:id/reschedule', authenticateAdmin, async (req, res) => {
   const { appointment_date, appointment_time, doctor_id } = req.body;
   const apptId = req.params.id;
+
+  if (supabase) {
+    try {
+      await supabase.from('appointments').update({
+        appointment_date,
+        appointment_time,
+        ...(doctor_id ? { doctor_id } : {}),
+        status: 'Confirmed'
+      }).eq('id', apptId);
+    } catch (e) {}
+  }
 
   const current = db.prepare('SELECT * FROM appointments WHERE id = ?').get(apptId);
   if (!current) {
@@ -446,7 +525,11 @@ router.patch('/:id/reschedule', authenticateAdmin, (req, res) => {
     UPDATE appointments 
     SET appointment_date = ?, appointment_time = ?, doctor_id = ?, doctor_name = ?, status = 'Confirmed'
     WHERE id = ?
-  `).run(appointment_date, appointment_time, targetDocId, doctor.name, apptId);
+  `).run(appointment_date, appointment_time, targetDocId, doctor ? doctor.name : 'Doctor', apptId);
+
+  const updated = db.prepare('SELECT * FROM appointments WHERE id = ?').get(apptId);
+  res.json({ success: true, appointment: updated, message: 'Appointment rescheduled successfully' });
+});
 
   const updated = db.prepare('SELECT * FROM appointments WHERE id = ?').get(apptId);
   res.json({ success: true, appointment: updated, message: 'Appointment rescheduled successfully' });

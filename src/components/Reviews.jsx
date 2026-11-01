@@ -15,6 +15,15 @@ export default function Reviews({ testimonials = [], onReviewSubmitted }) {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
+  // Local extra reviews submitted in this browser session
+  const [extraReviews, setExtraReviews] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('dc_submitted_reviews') || '[]');
+    } catch (e) {
+      return [];
+    }
+  });
+
   // Fallback sample testimonials if none in database yet
   const defaultTestimonials = [
     {
@@ -46,7 +55,9 @@ export default function Reviews({ testimonials = [], onReviewSubmitted }) {
     }
   ];
 
-  const reviewList = testimonials && testimonials.length > 0 ? testimonials : defaultTestimonials;
+  const baseList = testimonials && testimonials.length > 0 ? testimonials : defaultTestimonials;
+  const existingIds = new Set(baseList.map(r => r.id));
+  const reviewList = [...extraReviews.filter(r => !existingIds.has(r.id)), ...baseList];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -69,18 +80,23 @@ export default function Reviews({ testimonials = [], onReviewSubmitted }) {
         })
       });
 
+      const newRecord = res.testimonial || {
+        id: Date.now(),
+        patient_name: formData.patient_name.trim(),
+        rating: formData.rating,
+        treatment: formData.treatment,
+        review_text: formData.review_text.trim(),
+        is_approved: 1,
+        photo: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+        created_at: 'Just now'
+      };
+
+      // Add to local state so it appears on screen immediately
+      setExtraReviews((prev) => [newRecord, ...prev]);
+
       // Save locally to ensure immediate persistence across reloads
       try {
         const localRevs = JSON.parse(localStorage.getItem('dc_submitted_reviews') || '[]');
-        const newRecord = res.testimonial || {
-          id: Date.now(),
-          patient_name: formData.patient_name.trim(),
-          rating: formData.rating,
-          treatment: formData.treatment,
-          review_text: formData.review_text.trim(),
-          is_approved: 0,
-          created_at: new Date().toISOString()
-        };
         localRevs.unshift(newRecord);
         localStorage.setItem('dc_submitted_reviews', JSON.stringify(localRevs));
       } catch (e) {}

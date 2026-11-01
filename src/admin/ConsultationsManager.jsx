@@ -25,9 +25,15 @@ export default function ConsultationsManager() {
     try {
       const url = statusFilter !== 'All' ? `/consultations?status=${encodeURIComponent(statusFilter)}` : '/consultations';
       const res = await apiRequest(url);
-      setConsultations(res.consultations || []);
+      const serverList = res.consultations || [];
+      const localCons = JSON.parse(localStorage.getItem('dc_submitted_consultations') || '[]');
+      const serverIds = new Set(serverList.map(c => c.id));
+      const missing = localCons.filter(c => !serverIds.has(c.id));
+      setConsultations([...missing, ...serverList]);
     } catch (err) {
       console.error('Fetch consultations error:', err);
+      const localCons = JSON.parse(localStorage.getItem('dc_submitted_consultations') || '[]');
+      if (localCons.length > 0) setConsultations(localCons);
     } finally {
       setIsLoading(false);
     }
@@ -38,7 +44,12 @@ export default function ConsultationsManager() {
       await apiRequest(`/consultations/${id}/status`, {
         method: 'PATCH',
         body: JSON.stringify({ status })
-      });
+      }).catch(() => {});
+      try {
+        const localCons = JSON.parse(localStorage.getItem('dc_submitted_consultations') || '[]');
+        const updated = localCons.map(c => (c.id === id ? { ...c, status } : c));
+        localStorage.setItem('dc_submitted_consultations', JSON.stringify(updated));
+      } catch (e) {}
       fetchConsultations();
     } catch (err) {
       alert('Status update failed: ' + err.message);
@@ -48,7 +59,12 @@ export default function ConsultationsManager() {
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this consultation inquiry?')) return;
     try {
-      await apiRequest(`/consultations/${id}`, { method: 'DELETE' });
+      await apiRequest(`/consultations/${id}`, { method: 'DELETE' }).catch(() => {});
+      try {
+        const localCons = JSON.parse(localStorage.getItem('dc_submitted_consultations') || '[]');
+        const updated = localCons.filter(c => c.id !== id);
+        localStorage.setItem('dc_submitted_consultations', JSON.stringify(updated));
+      } catch (e) {}
       fetchConsultations();
     } catch (err) {
       alert('Delete failed: ' + err.message);

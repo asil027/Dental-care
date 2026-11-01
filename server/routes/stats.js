@@ -1,44 +1,103 @@
 const express = require('express');
 const db = require('../db');
 const { authenticateAdmin } = require('../auth');
+const { supabase } = require('../supabase');
 
 const router = express.Router();
 
-router.get('/overview', authenticateAdmin, (req, res) => {
+router.get('/overview', authenticateAdmin, async (req, res) => {
   try {
+    let supaAppointments = null;
+    let supaMessages = null;
+    let supaTestimonials = null;
+
+    if (supabase) {
+      try {
+        const [apptsRes, msgsRes, testsRes] = await Promise.all([
+          supabase.from('appointments').select('*').order('appointment_date', { ascending: false }),
+          supabase.from('contact_messages').select('*').order('id', { ascending: false }),
+          supabase.from('testimonials').select('*').order('id', { ascending: false })
+        ]);
+        if (!apptsRes.error && apptsRes.data) supaAppointments = apptsRes.data;
+        if (!msgsRes.error && msgsRes.data) supaMessages = msgsRes.data;
+        if (!testsRes.error && testsRes.data) supaTestimonials = testsRes.data;
+      } catch (e) {
+        console.warn('[Supabase Stats Error]', e.message);
+      }
+    }
+
     // 1. Total counts
-    const totalAppointments = db.prepare('SELECT COUNT(*) as count FROM appointments').get().count;
-    const pendingAppointments = db.prepare("SELECT COUNT(*) as count FROM appointments WHERE status = 'Pending'").get().count;
-    const confirmedAppointments = db.prepare("SELECT COUNT(*) as count FROM appointments WHERE status = 'Confirmed'").get().count;
-    const completedAppointments = db.prepare("SELECT COUNT(*) as count FROM appointments WHERE status = 'Completed'").get().count;
+    const totalAppointments = supaAppointments 
+      ? supaAppointments.length 
+      : db.prepare('SELECT COUNT(*) as count FROM appointments').get().count;
+
+    const pendingAppointments = supaAppointments 
+      ? supaAppointments.filter(a => a.status === 'Pending').length 
+      : db.prepare("SELECT COUNT(*) as count FROM appointments WHERE status = 'Pending'").get().count;
+
+    const confirmedAppointments = supaAppointments 
+      ? supaAppointments.filter(a => a.status === 'Confirmed').length 
+      : db.prepare("SELECT COUNT(*) as count FROM appointments WHERE status = 'Confirmed'").get().count;
+
+    const completedAppointments = supaAppointments 
+      ? supaAppointments.filter(a => a.status === 'Completed').length 
+      : db.prepare("SELECT COUNT(*) as count FROM appointments WHERE status = 'Completed'").get().count;
     
     // Today's date in Asia/Karachi
     const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Karachi' }).format(new Date());
-    const todayAppointments = db.prepare('SELECT COUNT(*) as count FROM appointments WHERE appointment_date = ?').get(todayStr).count;
+    const todayAppointments = supaAppointments 
+      ? supaAppointments.filter(a => a.appointment_date === todayStr).length 
+      : db.prepare('SELECT COUNT(*) as count FROM appointments WHERE appointment_date = ?').get(todayStr).count;
 
     const totalPatients = db.prepare('SELECT COUNT(*) as count FROM patients').get().count;
     const totalDoctors = db.prepare('SELECT COUNT(*) as count FROM doctors WHERE is_active = 1').get().count;
     const totalConsultations = db.prepare('SELECT COUNT(*) as count FROM consultations').get().count;
     
     // Inquiries / Messages & Testimonial review counts
-    const totalMessages = db.prepare('SELECT COUNT(*) as count FROM contact_messages').get().count;
-    const unreadMessages = db.prepare('SELECT COUNT(*) as count FROM contact_messages WHERE is_read = 0').get().count;
-    const totalTestimonials = db.prepare('SELECT COUNT(*) as count FROM testimonials').get().count;
-    const pendingTestimonials = db.prepare('SELECT COUNT(*) as count FROM testimonials WHERE is_approved = 0').get().count;
-    const recentMessages = db.prepare('SELECT * FROM contact_messages ORDER BY created_at DESC LIMIT 6').all();
-    const recentTestimonials = db.prepare('SELECT * FROM testimonials ORDER BY id DESC LIMIT 6').all();
+    const totalMessages = supaMessages 
+      ? supaMessages.length 
+      : db.prepare('SELECT COUNT(*) as count FROM contact_messages').get().count;
+
+    const unreadMessages = supaMessages 
+      ? supaMessages.filter(m => !m.is_read).length 
+      : db.prepare('SELECT COUNT(*) as count FROM contact_messages WHERE is_read = 0').get().count;
+
+    const totalTestimonials = supaTestimonials 
+      ? supaTestimonials.length 
+      : db.prepare('SELECT COUNT(*) as count FROM testimonials').get().count;
+
+    const pendingTestimonials = supaTestimonials 
+      ? supaTestimonials.filter(t => !t.is_approved).length 
+      : db.prepare('SELECT COUNT(*) as count FROM testimonials WHERE is_approved = 0').get().count;
+
+    const recentMessages = supaMessages 
+      ? supaMessages.slice(0, 6) 
+      : db.prepare('SELECT * FROM contact_messages ORDER BY created_at DESC LIMIT 6').all();
+
+    const recentTestimonials = supaTestimonials 
+      ? supaTestimonials.slice(0, 6) 
+      : db.prepare('SELECT * FROM testimonials ORDER BY id DESC LIMIT 6').all();
 
     // Total Revenue (sum of fees of confirmed/completed appointments)
-    const revRow = db.prepare("SELECT SUM(fee) as revenue FROM appointments WHERE status IN ('Confirmed', 'Completed')").get();
-    const totalRevenue = revRow.revenue || 0;
+    let totalRevenue = 0;
+    if (supaAppointments) {
+      totalRevenue = supaAppointments
+        .filter(a => a.status === 'Confirmed' || a.status === 'Completed')
+        .reduce((sum, a) => sum + (Number(a.fee) || 0), 0);
+    } else {
+      const revRow = db.prepare("SELECT SUM(fee) as revenue FROM appointments WHERE status IN ('Confirmed', 'Completed')").get();
+      totalRevenue = revRow.revenue || 0;
+    }
 
     // 2. Upcoming / Recent Appointments for table
-    const upcomingAppointments = db.prepare(`
-      SELECT id, patient_name, doctor_name, appointment_date, appointment_time, status, fee, service_name, appointment_code
-      FROM appointments
-      ORDER BY appointment_date DESC, appointment_time ASC
-      LIMIT 8
-    `).all();
+    const upcomingAppointments = supaAppointments 
+      ? supaAppointments.slice(0, 8) 
+      : db.prepare(`
+          SELECT id, patient_name, doctor_name, appointment_date, appointment_time, status, fee, service_name, appointment_code
+          FROM appointments
+          ORDER BY appointment_date DESC, appointment_time ASC
+          LIMIT 8
+        `).all();
 
     // 3. Recent Patients with their latest doctor & time
     const recentPatients = db.prepare(`
