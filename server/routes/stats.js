@@ -71,6 +71,24 @@ router.get('/overview', authenticateAdmin, async (req, res) => {
       ? supaTestimonials.filter(t => !t.is_approved).length 
       : db.prepare('SELECT COUNT(*) as count FROM testimonials WHERE is_approved = 0').get().count;
 
+    // Collect specific IDs of pending/unread items for precise client-side read tracking
+    const pendingAppointmentIds = (supaAppointments 
+      ? supaAppointments.filter(a => a.status === 'Pending')
+      : db.prepare("SELECT id FROM appointments WHERE status = 'Pending'").all()
+    ).map(a => a.id);
+
+    const unreadMessageIds = (supaMessages 
+      ? supaMessages.filter(m => !m.is_read)
+      : db.prepare("SELECT id FROM contact_messages WHERE is_read = 0").all()
+    ).map(m => m.id);
+
+    const pendingReviewIds = (supaTestimonials 
+      ? supaTestimonials.filter(t => !t.is_approved)
+      : db.prepare("SELECT id FROM testimonials WHERE is_approved = 0").all()
+    ).map(t => t.id);
+
+    const pendingConsultationIds = db.prepare("SELECT id FROM consultations WHERE status = 'Pending'").all().map(c => c.id);
+
     const recentMessages = supaMessages 
       ? supaMessages.slice(0, 6) 
       : db.prepare('SELECT * FROM contact_messages ORDER BY created_at DESC LIMIT 6').all();
@@ -169,6 +187,12 @@ router.get('/overview', authenticateAdmin, async (req, res) => {
       recentPatients,
       recentMessages,
       recentTestimonials,
+      unreadIds: {
+        appointments: pendingAppointmentIds,
+        messages: unreadMessageIds,
+        reviews: pendingReviewIds,
+        consultations: pendingConsultationIds
+      },
       weeklyChart: weeklyData,
       monthlyStats
     });

@@ -36,21 +36,70 @@ export default function AdminLayout({ admin, onLogout }) {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const getReadSet = (key) => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem(key) || '[]').map(String));
+    } catch (e) {
+      return new Set();
+    }
+  };
+
+  const markIdsRead = (key, ids = []) => {
+    try {
+      const existing = getReadSet(key);
+      ids.forEach((id) => existing.add(String(id)));
+      localStorage.setItem(key, JSON.stringify([...existing]));
+    } catch (e) {}
+  };
+
   useEffect(() => {
+    const path = location.pathname;
+
     // Fetch quick stats for badges
     apiRequest('/stats/overview')
       .then((res) => {
-        if (res.stats?.pendingAppointments !== undefined) {
-          setPendingCount(res.stats.pendingAppointments);
+        // 1. Appointments
+        const apptIds = res.unreadIds?.appointments || [];
+        if (path.startsWith('/admin/appointments')) {
+          markIdsRead('dc_read_appointment_ids', apptIds);
+          setPendingCount(0);
+        } else {
+          const readApptIds = getReadSet('dc_read_appointment_ids');
+          const unreadAppts = apptIds.filter((id) => !readApptIds.has(String(id)));
+          setPendingCount(unreadAppts.length);
         }
-        if (res.stats?.unreadMessages !== undefined) {
-          setUnreadMessagesCount(res.stats.unreadMessages);
+
+        // 2. Inquiries & Messages
+        const msgIds = res.unreadIds?.messages || [];
+        if (path.startsWith('/admin/messages')) {
+          markIdsRead('dc_read_message_ids', msgIds);
+          setUnreadMessagesCount(0);
+        } else {
+          const readMsgIds = getReadSet('dc_read_message_ids');
+          const unreadMsgs = msgIds.filter((id) => !readMsgIds.has(String(id)));
+          setUnreadMessagesCount(unreadMsgs.length);
         }
-        if (res.stats?.pendingTestimonials !== undefined) {
-          setPendingReviewsCount(res.stats.pendingTestimonials);
+
+        // 3. Consultations
+        const consIds = res.unreadIds?.consultations || [];
+        if (path.startsWith('/admin/consultations')) {
+          markIdsRead('dc_read_consultation_ids', consIds);
+          setPendingConsultationsCount(0);
+        } else {
+          const readConsIds = getReadSet('dc_read_consultation_ids');
+          const unreadCons = consIds.filter((id) => !readConsIds.has(String(id)));
+          setPendingConsultationsCount(unreadCons.length);
         }
-        if (res.stats?.pendingConsultations !== undefined) {
-          setPendingConsultationsCount(res.stats.pendingConsultations);
+
+        // 4. Testimonials & Reviews
+        const revIds = res.unreadIds?.reviews || [];
+        if (path.startsWith('/admin/testimonials')) {
+          markIdsRead('dc_read_review_ids', revIds);
+          setPendingReviewsCount(0);
+        } else {
+          const readRevIds = getReadSet('dc_read_review_ids');
+          const unreadRevs = revIds.filter((id) => !readRevIds.has(String(id)));
+          setPendingReviewsCount(unreadRevs.length);
         }
       })
       .catch(() => {});

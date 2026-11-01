@@ -109,7 +109,15 @@ export default function AppointmentsManager() {
       const localAppts = JSON.parse(localStorage.getItem('dc_submitted_appointments') || '[]');
       const serverCodes = new Set(serverAppts.map(a => a.appointment_code || a.id));
       const missingAppts = localAppts.filter(a => !serverCodes.has(a.appointment_code || a.id));
-      setAppointments([...missingAppts, ...serverAppts]);
+      const allMerged = [...missingAppts, ...serverAppts];
+      setAppointments(allMerged);
+
+      // Automatically mark all loaded appointments as read/seen
+      try {
+        const readIds = new Set(JSON.parse(localStorage.getItem('dc_read_appointment_ids') || '[]').map(String));
+        allMerged.forEach((a) => readIds.add(String(a.id)));
+        localStorage.setItem('dc_read_appointment_ids', JSON.stringify([...readIds]));
+      } catch (e) {}
     } catch (err) {
       console.error('Fetch appointments error:', err);
       const localAppts = JSON.parse(localStorage.getItem('dc_submitted_appointments') || '[]');

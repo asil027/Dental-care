@@ -69,7 +69,15 @@ export default function ConsultationsManager() {
       const localCons = JSON.parse(localStorage.getItem('dc_submitted_consultations') || '[]');
       const serverIds = new Set(serverList.map((c) => c.id));
       const missing = localCons.filter((c) => !serverIds.has(c.id));
-      setConsultations([...missing, ...serverList]);
+      const allMerged = [...missing, ...serverList];
+      setConsultations(allMerged);
+
+      // Automatically mark all loaded consultations as read/seen
+      try {
+        const readIds = new Set(JSON.parse(localStorage.getItem('dc_read_consultation_ids') || '[]').map(String));
+        allMerged.forEach((c) => readIds.add(String(c.id)));
+        localStorage.setItem('dc_read_consultation_ids', JSON.stringify([...readIds]));
+      } catch (e) {}
     } catch (err) {
       console.error('Fetch consultations error:', err);
       const localCons = JSON.parse(localStorage.getItem('dc_submitted_consultations') || '[]');

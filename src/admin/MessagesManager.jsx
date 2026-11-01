@@ -37,7 +37,15 @@ export default function MessagesManager() {
       const localMsgs = JSON.parse(localStorage.getItem('dc_submitted_messages') || '[]');
       const serverMsgKeys = new Set(serverMsgs.map(m => m.id || `${m.email}-${m.created_at}`));
       const missingMsgs = localMsgs.filter(m => !serverMsgKeys.has(m.id || `${m.email}-${m.created_at}`));
-      setMessages([...missingMsgs, ...serverMsgs]);
+      const allMsgs = [...missingMsgs, ...serverMsgs];
+      setMessages(allMsgs);
+
+      // Automatically mark all loaded messages as read/seen
+      try {
+        const readIds = new Set(JSON.parse(localStorage.getItem('dc_read_message_ids') || '[]').map(String));
+        allMsgs.forEach((m) => readIds.add(String(m.id)));
+        localStorage.setItem('dc_read_message_ids', JSON.stringify([...readIds]));
+      } catch (e) {}
     } catch (err) {
       console.error('Failed to fetch contact messages:', err);
       const localMsgs = JSON.parse(localStorage.getItem('dc_submitted_messages') || '[]');
