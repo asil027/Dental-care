@@ -16,7 +16,14 @@ import { Loader2 } from 'lucide-react';
 
 export default function PublicHome() {
   const [cms, setCms] = useState({});
-  const [settings, setSettings] = useState({});
+  const [settings, setSettings] = useState(() => {
+    try {
+      const cached = localStorage.getItem('dental_clinic_settings');
+      return cached ? JSON.parse(cached) : {};
+    } catch (e) {
+      return {};
+    }
+  });
   const [doctors, setDoctors] = useState([]);
   const [services, setServices] = useState([]);
   const [testimonials, setTestimonials] = useState([]);
@@ -57,7 +64,12 @@ export default function PublicHome() {
       ]);
 
       setCms(cmsRes.cms || {});
-      setSettings(settingsRes.settings || {});
+      if (settingsRes?.settings) {
+        setSettings(settingsRes.settings);
+        try {
+          localStorage.setItem('dental_clinic_settings', JSON.stringify(settingsRes.settings));
+        } catch (e) {}
+      }
       setDoctors(doctorsRes.doctors || []);
       setServices(servicesRes.services || []);
       setTestimonials(testimonialsRes.testimonials || []);

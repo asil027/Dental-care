@@ -17,7 +17,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { apiRequest } from '../utils/api';
-import { getTodayDateKarachi, isDateOff, generateTimeSlots, getDayName } from '../utils/time';
+import { getTodayDateKarachi, isDateOff, generateTimeSlots, getDayName, getNextAvailableWorkingDate } from '../utils/time';
 
 export default function AppointmentsManager() {
   const [searchParams] = useSearchParams();
@@ -79,9 +79,13 @@ export default function AppointmentsManager() {
       ]);
       setDoctors(docsRes.doctors || []);
       setServices(servsRes.services || []);
-      setSettings(settingsRes.settings || {});
+      const apptSettings = settingsRes.settings || {};
+      setSettings(apptSettings);
+      const defaultDate = getNextAvailableWorkingDate(apptSettings.weekly_holiday);
       if (docsRes.doctors?.length > 0) {
-        setNewApptData((prev) => ({ ...prev, doctor_id: docsRes.doctors[0].id }));
+        setNewApptData((prev) => ({ ...prev, doctor_id: docsRes.doctors[0].id, appointment_date: defaultDate }));
+      } else {
+        setNewApptData((prev) => ({ ...prev, appointment_date: defaultDate }));
       }
       if (servsRes.services?.length > 0) {
         setNewApptData((prev) => ({ ...prev, service_id: servsRes.services[0].id }));

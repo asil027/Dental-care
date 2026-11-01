@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, User, Mail, Phone, Stethoscope, Sparkles, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { apiRequest } from '../utils/api';
-import { getTodayDateKarachi, isDateOff, generateTimeSlots, getDayName } from '../utils/time';
+import { getTodayDateKarachi, isDateOff, generateTimeSlots, getDayName, getNextAvailableWorkingDate } from '../utils/time';
 
 export default function QuickBooking({ doctors = [], services = [], settings = {}, onBookingSuccess }) {
   const [formData, setFormData] = useState({
@@ -10,7 +10,7 @@ export default function QuickBooking({ doctors = [], services = [], settings = {
     patient_phone: '',
     doctor_id: '',
     service_id: '',
-    appointment_date: getTodayDateKarachi(),
+    appointment_date: getNextAvailableWorkingDate(settings?.weekly_holiday),
     appointment_time: '11:30 AM',
     notes: ''
   });
@@ -37,13 +37,24 @@ export default function QuickBooking({ doctors = [], services = [], settings = {
     }
   }, [doctors, services]);
 
+  // When settings load or change, ensure default date is an available working day
+  useEffect(() => {
+    if (settings?.weekly_holiday && isDateOff(formData.appointment_date, settings.weekly_holiday)) {
+      setFormData((prev) => ({
+        ...prev,
+        appointment_date: getNextAvailableWorkingDate(settings.weekly_holiday)
+      }));
+      setErrorMessage('');
+    }
+  }, [settings?.weekly_holiday]);
+
   // Check slot availability when doctor or date changes
   useEffect(() => {
     if (!formData.doctor_id || !formData.appointment_date) return;
 
     if (isDateOff(formData.appointment_date, settings?.weekly_holiday)) {
       const day = getDayName(formData.appointment_date);
-      setErrorMessage(`Dental Care clinic is closed on ${day}s. Configured off day: ${settings?.weekly_holiday || 'Sunday'}.`);
+      setErrorMessage(`Dental Care clinic is closed on ${day}s. Configured off day: ${settings?.weekly_holiday || 'Friday'}.`);
       setAvailableSlots([]);
       return;
     } else {
@@ -81,6 +92,11 @@ export default function QuickBooking({ doctors = [], services = [], settings = {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === 'appointment_date') {
+      if (!isDateOff(value, settings?.weekly_holiday)) {
+        setErrorMessage('');
+      }
+    }
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -129,6 +145,7 @@ export default function QuickBooking({ doctors = [], services = [], settings = {
         patient_name: '',
         patient_email: '',
         patient_phone: '',
+        appointment_date: getNextAvailableWorkingDate(settings?.weekly_holiday),
         notes: ''
       }));
     } catch (err) {
@@ -153,7 +170,7 @@ export default function QuickBooking({ doctors = [], services = [], settings = {
               Book Your Dental Appointment
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Select your preferred specialist and time. Operating hours: {settings?.operating_start_time || '11:00 AM'} – {settings?.operating_end_time || '12:00 AM'} ({settings?.weekly_holiday ? `${settings.weekly_holiday} Closed` : 'Sunday Closed'}).
+              Select your preferred specialist and time. Operating hours: {settings?.operating_start_time || '11:00 AM'} – {settings?.operating_end_time || '12:00 AM'} ({settings?.weekly_holiday && settings.weekly_holiday.toLowerCase() !== 'none' ? `${settings.weekly_holiday} Closed` : 'Open Daily'}).
             </p>
           </div>
           <div className="hidden lg:flex items-center gap-3 text-right">
@@ -289,7 +306,7 @@ export default function QuickBooking({ doctors = [], services = [], settings = {
             {/* Select Date */}
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                Select Date {settings?.weekly_holiday ? `(${settings.weekly_holiday} Off)` : ''} *
+                Select Date {settings?.weekly_holiday && settings.weekly_holiday.toLowerCase() !== 'none' ? `(${settings.weekly_holiday} Off)` : ''} *
               </label>
               <div className="relative">
                 <Calendar className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />

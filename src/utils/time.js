@@ -43,6 +43,67 @@ export function isSunday(dateString) {
   return isDateOff(dateString, 'Sunday');
 }
 
+export function getNextAvailableWorkingDate(offDaysConfig, startDateStr) {
+  let dateStr = startDateStr || getTodayDateKarachi();
+  for (let i = 0; i < 14; i++) {
+    if (!isDateOff(dateStr, offDaysConfig)) {
+      return dateStr;
+    }
+    const [y, m, d] = dateStr.split('-').map(Number);
+    // Use UTC date addition to avoid timezone drift
+    const nextDate = new Date(Date.UTC(y, m - 1, d + 1));
+    const year = nextDate.getUTCFullYear();
+    const month = String(nextDate.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(nextDate.getUTCDate()).padStart(2, '0');
+    dateStr = `${year}-${month}-${day}`;
+  }
+  return dateStr;
+}
+
+export function getHeroScheduleLines(settings) {
+  const offDays = parseOffDays(settings?.weekly_holiday).map((d) => d.toLowerCase());
+  const hours = `${settings?.operating_start_time || '11:00 AM'} – ${settings?.operating_end_time || '12:00 AM'}`;
+
+  if (offDays.includes('none')) {
+    return [
+      { label: 'Monday – Sunday:', time: hours, isOff: false },
+      { label: 'Working Status:', time: 'Open 7 Days a Week', isOff: false },
+      { label: 'Closed / Off Day(s):', time: 'None (Open Daily)', isOff: true }
+    ];
+  }
+
+  if (offDays.includes('friday') && offDays.includes('sunday')) {
+    return [
+      { label: 'Monday – Thursday:', time: hours, isOff: false },
+      { label: 'Saturday:', time: hours, isOff: false },
+      { label: 'Closed / Off Day(s):', time: 'FRIDAY, SUNDAY', isOff: true }
+    ];
+  }
+
+  if (offDays.includes('friday')) {
+    return [
+      { label: 'Monday – Thursday:', time: hours, isOff: false },
+      { label: 'Saturday – Sunday:', time: hours, isOff: false },
+      { label: 'Closed / Off Day(s):', time: 'FRIDAY', isOff: true }
+    ];
+  }
+
+  if (offDays.includes('sunday')) {
+    return [
+      { label: 'Monday – Friday:', time: hours, isOff: false },
+      { label: 'Saturday:', time: hours, isOff: false },
+      { label: 'Closed / Off Day(s):', time: 'SUNDAY', isOff: true }
+    ];
+  }
+
+  const offDayName = parseOffDays(settings?.weekly_holiday).join(', ');
+  return [
+    { label: 'Operating Days:', time: `Open except ${offDayName}`, isOff: false },
+    { label: 'Operating Hours:', time: hours, isOff: false },
+    { label: 'Closed / Off Day(s):', time: offDayName.toUpperCase(), isOff: true }
+  ];
+}
+
 export function formatPKR(amount) {
   if (amount === undefined || amount === null) return 'PKR 0';
   return 'PKR ' + Number(amount).toLocaleString('en-US');

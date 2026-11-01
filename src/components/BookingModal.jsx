@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, User, Mail, Phone, X, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { apiRequest } from '../utils/api';
-import { getTodayDateKarachi, isDateOff, generateTimeSlots, getDayName } from '../utils/time';
+import { getTodayDateKarachi, isDateOff, generateTimeSlots, getDayName, getNextAvailableWorkingDate } from '../utils/time';
 
 export default function BookingModal({
   isOpen,
@@ -18,7 +18,7 @@ export default function BookingModal({
     patient_phone: '',
     doctor_id: '',
     service_id: '',
-    appointment_date: getTodayDateKarachi(),
+    appointment_date: getNextAvailableWorkingDate(settings?.weekly_holiday),
     appointment_time: '11:30 AM',
     notes: ''
   });
@@ -45,12 +45,22 @@ export default function BookingModal({
         patient_phone: '',
         doctor_id: preSelectedDoctor ? preSelectedDoctor.id : (doctors[0]?.id || ''),
         service_id: preSelectedService ? preSelectedService.id : (services[0]?.id || ''),
-        appointment_date: getTodayDateKarachi(),
+        appointment_date: getNextAvailableWorkingDate(settings?.weekly_holiday),
         appointment_time: '11:30 AM',
         notes: ''
       });
     }
-  }, [isOpen, preSelectedDoctor, preSelectedService, doctors, services]);
+  }, [isOpen, preSelectedDoctor, preSelectedService, doctors, services, settings?.weekly_holiday]);
+
+  useEffect(() => {
+    if (settings?.weekly_holiday && isDateOff(formData.appointment_date, settings.weekly_holiday)) {
+      setFormData((prev) => ({
+        ...prev,
+        appointment_date: getNextAvailableWorkingDate(settings.weekly_holiday)
+      }));
+      setErrorMessage('');
+    }
+  }, [settings?.weekly_holiday]);
 
   useEffect(() => {
     if (!formData.doctor_id || !formData.appointment_date) return;
@@ -95,7 +105,11 @@ export default function BookingModal({
   if (!isOpen) return null;
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    if (name === 'appointment_date' && !isDateOff(value, settings?.weekly_holiday)) {
+      setErrorMessage('');
+    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {

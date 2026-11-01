@@ -1,7 +1,9 @@
 import React from 'react';
 import { Calendar, Stethoscope, Cpu, Sparkles, ShieldCheck, Clock, PhoneCall, ArrowRight, MapPin } from 'lucide-react';
+import { getHeroScheduleLines } from '../utils/time';
 
 export default function Hero({ cms, settings, onOpenBooking }) {
+  const scheduleLines = getHeroScheduleLines(settings);
   const heroData = cms?.hero || {};
   const badge = heroData.badge || 'WELCOME TO DENTAL CARE';
   const heading = heroData.heading || 'Your Smile\nOur Priority';
@@ -139,24 +141,19 @@ export default function Hero({ cms, settings, onOpenBooking }) {
                 </div>
 
                 <div className="mt-3 space-y-1.5 text-xs text-slate-600">
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium text-slate-700">Monday – Friday:</span>
-                    <span className="font-semibold text-[#0756A6]">
-                      {settings?.working_hours_weekday || `${settings?.operating_start_time || '11:00 AM'} – ${settings?.operating_end_time || '12:00 AM'}`}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium text-slate-700">Saturday:</span>
-                    <span className="font-semibold text-[#0756A6]">
-                      {settings?.working_hours_saturday || `${settings?.operating_start_time || '11:00 AM'} – ${settings?.operating_end_time || '12:00 AM'}`}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center text-rose-600">
-                    <span className="font-medium">Closed / Off Day(s):</span>
-                    <span className="font-bold uppercase tracking-wider">
-                      {settings?.weekly_holiday || 'Sunday'}
-                    </span>
-                  </div>
+                  {scheduleLines.map((line, idx) => (
+                    <div
+                      key={idx}
+                      className={`flex justify-between items-center ${line.isOff ? 'text-rose-600' : ''}`}
+                    >
+                      <span className={`font-medium ${line.isOff ? '' : 'text-slate-700'}`}>
+                        {line.label}
+                      </span>
+                      <span className={line.isOff ? 'font-bold uppercase tracking-wider' : 'font-semibold text-[#0756A6]'}>
+                        {line.time}
+                      </span>
+                    </div>
+                  ))}
                 </div>
 
                 {/* Dynamic Clinic Location Address */}

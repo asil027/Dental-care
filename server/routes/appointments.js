@@ -12,6 +12,30 @@ function getClinicSettings() {
   return settings;
 }
 
+async function syncLiveClinicSettings() {
+  const settings = getClinicSettings();
+  if (supabase) {
+    try {
+      const { data, error } = await supabase.from('clinic_settings').select('key, value');
+      if (!error && data && data.length > 0) {
+        for (const r of data) {
+          settings[r.key] = r.value;
+          try {
+            db.prepare(`
+              INSERT INTO clinic_settings (key, value)
+              VALUES (?, ?)
+              ON CONFLICT(key) DO UPDATE SET value = excluded.value
+            `).run(r.key, String(r.value));
+          } catch (e) {}
+        }
+      }
+    } catch (e) {
+      console.warn('[Appointments] Live settings sync error:', e.message);
+    }
+  }
+  return settings;
+}
+
 function parseTimeToMinutes(t) {
   if (!t) return null;
   const m = t.trim().match(/^(0?[1-9]|1[0-2]):([0-5][0-9])\s*(AM|PM)$/i);
@@ -141,13 +165,13 @@ function validateAppointmentSlot(dateStr, timeStr, doctorId, excludeAppointmentI
 }
 
 // Check availability for a specific doctor & date dynamically
-router.get('/check-availability', (req, res) => {
+router.get('/check-availability', async (req, res) => {
   const { doctor_id, date } = req.query;
   if (!doctor_id || !date) {
     return res.status(400).json({ error: 'doctor_id and date are required' });
   }
 
-  const settings = getClinicSettings();
+  const settings = await syncLiveClinicSettings();
 
   // Check if date is in configured off days
   const [year, month, day] = date.split('-').map(Number);
@@ -216,6 +240,9 @@ router.post('/book', async (req, res) => {
   if (!patient_name || !patient_email || !patient_phone || !doctor_id || !service_id || !appointment_date || !appointment_time) {
     return res.status(400).json({ error: 'Please provide all required fields' });
   }
+
+  // Ensure live clinic rules are in sync
+  await syncLiveClinicSettings();
 
   // Validate Slot with dynamic clinic rules
   const validation = validateAppointmentSlot(appointment_date, appointment_time, doctor_id);
@@ -398,7 +425,7 @@ router.get('/:id', authenticateAdmin, (req, res) => {
 });
 
 // Admin: Create manual appointment
-router.post('/manual', authenticateAdmin, (req, res) => {
+router.post('/manual', authenticateAdmin, async (req, res) => {
   const {
     patient_name,
     patient_email,
@@ -416,6 +443,7 @@ router.post('/manual', authenticateAdmin, (req, res) => {
     return res.status(400).json({ error: 'Missing required appointment fields' });
   }
 
+  await syncLiveClinicSettings();
   const validation = validateAppointmentSlot(appointment_date, appointment_time, doctor_id);
   if (!validation.valid) {
     return res.status(400).json({ error: validation.error });
@@ -514,6 +542,7 @@ router.patch('/:id/reschedule', authenticateAdmin, async (req, res) => {
   }
 
   const targetDocId = doctor_id || current.doctor_id;
+  await syncLiveClinicSettings();
   const validation = validateAppointmentSlot(appointment_date, appointment_time, targetDocId, apptId);
   if (!validation.valid) {
     return res.status(400).json({ error: validation.error });
@@ -532,7 +561,7 @@ router.patch('/:id/reschedule', authenticateAdmin, async (req, res) => {
 });
 
 // Admin: Edit appointment info
-router.put('/:id', authenticateAdmin, (req, res) => {
+router.put('/:id', authenticateAdmin, async (req, res) => {
   const {
     patient_name,
     patient_email,
@@ -552,6 +581,7 @@ router.put('/:id', authenticateAdmin, (req, res) => {
   }
 
   if (appointment_date !== existing.appointment_date || appointment_time !== existing.appointment_time) {
+    await syncLiveClinicSettings();
     const val = validateAppointmentSlot(appointment_date, appointment_time, existing.doctor_id, apptId);
     if (!val.valid) {
       return res.status(400).json({ error: val.error });

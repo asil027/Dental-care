@@ -35,6 +35,9 @@ export default function SettingsManager({ onSettingsUpdated }) {
       const res = await apiRequest('/settings');
       const loaded = res.settings || {};
       setSettings(loaded);
+      try {
+        localStorage.setItem('dental_clinic_settings', JSON.stringify(loaded));
+      } catch (e) {}
 
       // Parse off days
       const offList = parseOffDays(loaded.weekly_holiday || 'Sunday');
@@ -187,6 +190,9 @@ export default function SettingsManager({ onSettingsUpdated }) {
       });
 
       setSettings(res.settings);
+      try {
+        localStorage.setItem('dental_clinic_settings', JSON.stringify(res.settings));
+      } catch (e) {}
       setSaveSuccess(true);
       if (onSettingsUpdated) onSettingsUpdated(res.settings);
       setTimeout(() => setSaveSuccess(false), 5000);
