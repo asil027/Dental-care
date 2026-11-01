@@ -52,6 +52,7 @@ router.get('/overview', authenticateAdmin, async (req, res) => {
     const totalPatients = db.prepare('SELECT COUNT(*) as count FROM patients').get().count;
     const totalDoctors = db.prepare('SELECT COUNT(*) as count FROM doctors WHERE is_active = 1').get().count;
     const totalConsultations = db.prepare('SELECT COUNT(*) as count FROM consultations').get().count;
+    const pendingConsultations = db.prepare("SELECT COUNT(*) as count FROM consultations WHERE status = 'Pending'").get().count;
     
     // Inquiries / Messages & Testimonial review counts
     const totalMessages = supaMessages 
@@ -157,6 +158,7 @@ router.get('/overview', authenticateAdmin, async (req, res) => {
         totalPatients,
         totalDoctors,
         totalConsultations,
+        pendingConsultations,
         totalRevenue,
         totalMessages,
         unreadMessages,

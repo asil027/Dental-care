@@ -94,7 +94,7 @@ export default function Doctors({ doctors = [], onBookDoctor }) {
               {/* Consultation Button */}
               <div className="px-5 pb-5">
                 <button
-                  onClick={() => onBookDoctor(doctor)}
+                  onClick={() => onBookDoctor(doctor, 'consultation')}
                   className="w-full py-2.5 rounded-xl text-xs font-bold text-[#092C59] hover:text-white bg-blue-50 hover:bg-[#092C59] transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-blue-100"
                 >
                   <Calendar className="w-3.5 h-3.5" />

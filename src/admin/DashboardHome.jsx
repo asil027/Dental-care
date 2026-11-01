@@ -647,6 +647,21 @@ export default function DashboardHome() {
             </button>
 
             <button
+              onClick={() => navigate('/admin/consultations')}
+              className="w-full py-2.5 px-4 rounded-xl bg-[#0756A6] hover:bg-[#092C59] text-white text-xs font-bold transition flex items-center justify-between cursor-pointer shadow-xs"
+            >
+              <div className="flex items-center gap-2.5">
+                <MessageSquare className="w-4 h-4 text-blue-200" />
+                <span>Consultations</span>
+              </div>
+              {stats.pendingConsultations > 0 && (
+                <span className="px-2 py-0.5 rounded-full bg-amber-400 text-slate-900 text-[10px] font-extrabold">
+                  {stats.pendingConsultations} Pending
+                </span>
+              )}
+            </button>
+
+            <button
               onClick={() => navigate('/admin/testimonials')}
               className="w-full py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition flex items-center justify-between cursor-pointer shadow-xs"
             >

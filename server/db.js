@@ -279,7 +279,47 @@ if (!db) {
         created_at: new Date().toISOString()
       }
     ],
-    consultations: [],
+    consultations: [
+      {
+        id: 1,
+        patient_name: 'Usman Ali',
+        patient_email: 'usman.ali@gmail.com',
+        patient_phone: '+92 301 4455667',
+        doctor_id: 2,
+        doctor_name: 'Dr. Ahmed Raza',
+        preferred_date: '2026-11-03',
+        preferred_time: '04:00 PM',
+        dental_concern: 'Interested in clear aligners (Invisalign) for lower crowded teeth. Need an initial evaluation and cost estimation.',
+        status: 'Pending',
+        created_at: new Date(Date.now() - 3600000 * 4).toISOString()
+      },
+      {
+        id: 2,
+        patient_name: 'Fatima Noor',
+        patient_email: 'fatima.noor@outlook.com',
+        patient_phone: '+92 321 8899001',
+        doctor_id: 1,
+        doctor_name: 'Dr. Ayesha Khan',
+        preferred_date: '2026-11-04',
+        preferred_time: '06:30 PM',
+        dental_concern: 'Experiencing sensitivity to cold liquids in upper left molar. Want to know if filling or root canal is needed.',
+        status: 'Approved',
+        created_at: new Date(Date.now() - 3600000 * 24).toISOString()
+      },
+      {
+        id: 3,
+        patient_name: 'Hamza Sheikh',
+        patient_email: 'hamza.sheikh@hotmail.com',
+        patient_phone: '+92 333 5566778',
+        doctor_id: 3,
+        doctor_name: 'Dr. Sana Malik',
+        preferred_date: '2026-11-05',
+        preferred_time: '02:00 PM',
+        dental_concern: 'Discoloration on front upper teeth. Want advice on laser teeth whitening vs composite bonding.',
+        status: 'Completed',
+        created_at: new Date(Date.now() - 3600000 * 48).toISOString()
+      }
+    ],
     testimonials: [
       {
         id: 1,
@@ -409,6 +449,12 @@ if (!db) {
               return store.contact_messages.find(m => m.id == params[0]) || null;
             }
           }
+          if (cleanSql.includes('from consultations')) {
+            if (cleanSql.includes('where id = ?') && params.length > 0) {
+              return store.consultations.find(c => c.id == params[0]) || null;
+            }
+            return store.consultations[0] || null;
+          }
           if (cleanSql.includes('from patients')) {
             if (cleanSql.includes('where phone = ?')) {
               return store.patients.find(p => p.phone === params[0]) || null;
@@ -492,6 +538,13 @@ if (!db) {
           }
           if (cleanSql.includes('from contact_messages')) {
             return [...store.contact_messages];
+          }
+          if (cleanSql.includes('from consultations')) {
+            let list = [...store.consultations];
+            if (cleanSql.includes('status = ?') && params.length > 0) {
+              return list.filter(c => c.status === params[0]);
+            }
+            return list;
           }
           if (cleanSql.includes('from appointments')) {
             let list = [...store.appointments];
@@ -580,6 +633,42 @@ if (!db) {
           if (cleanSql.includes('delete from contact_messages')) {
             const idx = store.contact_messages.findIndex(m => m.id == params[0]);
             if (idx !== -1) store.contact_messages.splice(idx, 1);
+            saveStoreToFile();
+            return { changes: 1 };
+          }
+          if (cleanSql.includes('insert into consultations')) {
+            const item = {
+              id: store.consultations.length + 1,
+              patient_name: params[0],
+              patient_email: params[1] || '',
+              patient_phone: params[2],
+              doctor_id: params[3] ? parseInt(params[3], 10) : null,
+              preferred_date: params[4] || null,
+              preferred_time: params[5] || null,
+              dental_concern: params[6],
+              status: params[7] || 'Pending',
+              created_at: params[8] || new Date().toISOString()
+            };
+            const doc = store.doctors.find(d => d.id == item.doctor_id);
+            item.doctor_name = doc ? doc.name : 'General Specialist';
+            store.consultations.unshift(item);
+            saveStoreToFile();
+            return { changes: 1, lastInsertRowid: item.id };
+          }
+          if (cleanSql.includes('update consultations')) {
+            const targetId = params[params.length - 1];
+            const item = store.consultations.find(c => c.id == targetId);
+            if (item) {
+              if (cleanSql.includes('status = ?')) {
+                item.status = params[0];
+              }
+            }
+            saveStoreToFile();
+            return { changes: 1 };
+          }
+          if (cleanSql.includes('delete from consultations')) {
+            const idx = store.consultations.findIndex(c => c.id == params[0]);
+            if (idx !== -1) store.consultations.splice(idx, 1);
             saveStoreToFile();
             return { changes: 1 };
           }
@@ -1312,6 +1401,55 @@ function seedDefaultData() {
 
     for (const g of defaultGallery) {
       insertGallery.run(...g);
+    }
+  }
+
+  // Check Consultations
+  const checkConsultations = db.prepare('SELECT COUNT(*) as count FROM consultations').get();
+  if (checkConsultations.count === 0) {
+    const insertConsultation = db.prepare(`
+      INSERT INTO consultations (patient_name, patient_email, patient_phone, doctor_id, preferred_date, preferred_time, dental_concern, status, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const defaultConsultations = [
+      [
+        'Usman Ali',
+        'usman.ali@gmail.com',
+        '+92 301 4455667',
+        2,
+        '2026-11-03',
+        '04:00 PM',
+        'Interested in clear aligners (Invisalign) for lower crowded teeth. Need an initial evaluation and cost estimation.',
+        'Pending',
+        new Date(Date.now() - 3600000 * 4).toISOString()
+      ],
+      [
+        'Fatima Noor',
+        'fatima.noor@outlook.com',
+        '+92 321 8899001',
+        1,
+        '2026-11-04',
+        '06:30 PM',
+        'Experiencing sensitivity to cold liquids in upper left molar. Want to know if filling or root canal is needed.',
+        'Approved',
+        new Date(Date.now() - 3600000 * 24).toISOString()
+      ],
+      [
+        'Hamza Sheikh',
+        'hamza.sheikh@hotmail.com',
+        '+92 333 5566778',
+        3,
+        '2026-11-05',
+        '02:00 PM',
+        'Discoloration on front upper teeth. Want advice on laser teeth whitening vs composite bonding.',
+        'Completed',
+        new Date(Date.now() - 3600000 * 48).toISOString()
+      ]
+    ];
+
+    for (const c of defaultConsultations) {
+      insertConsultation.run(...c);
     }
   }
 }

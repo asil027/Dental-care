@@ -32,6 +32,7 @@ export default function AdminLayout({ admin, onLogout }) {
   const [pendingCount, setPendingCount] = useState(0);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
   const [pendingReviewsCount, setPendingReviewsCount] = useState(0);
+  const [pendingConsultationsCount, setPendingConsultationsCount] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -48,6 +49,9 @@ export default function AdminLayout({ admin, onLogout }) {
         if (res.stats?.pendingTestimonials !== undefined) {
           setPendingReviewsCount(res.stats.pendingTestimonials);
         }
+        if (res.stats?.pendingConsultations !== undefined) {
+          setPendingConsultationsCount(res.stats.pendingConsultations);
+        }
       })
       .catch(() => {});
   }, [location.pathname]);
@@ -63,7 +67,7 @@ export default function AdminLayout({ admin, onLogout }) {
     { name: 'Dashboard', path: '/admin', icon: LayoutDashboard, exact: true },
     { name: 'Appointments', path: '/admin/appointments', icon: Calendar, badge: pendingCount, badgeColor: 'bg-amber-400 text-slate-900' },
     { name: 'Inquiries & Messages', path: '/admin/messages', icon: Mail, badge: unreadMessagesCount, badgeColor: 'bg-rose-500 text-white' },
-    { name: 'Consultations', path: '/admin/consultations', icon: MessageSquare },
+    { name: 'Consultations', path: '/admin/consultations', icon: MessageSquare, badge: pendingConsultationsCount, badgeColor: 'bg-amber-400 text-slate-900' },
     { name: 'Patients', path: '/admin/patients', icon: Users },
     { name: 'Doctors', path: '/admin/doctors', icon: Stethoscope },
     { name: 'Services', path: '/admin/services', icon: Grid },

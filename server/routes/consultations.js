@@ -13,14 +13,23 @@ router.post('/request', async (req, res) => {
     return res.status(400).json({ error: 'Patient name, phone, and dental concern description are required' });
   }
 
-  // Prevent Sunday
+  // Dynamic off-days check
   if (preferred_date) {
-    const [year, month, day] = preferred_date.split('-').map(Number);
-    const dateObj = new Date(year, month - 1, day);
-    if (dateObj.getDay() === 0) {
-      return res.status(400).json({ error: 'Clinic is closed on Sundays. Please select Monday - Saturday.' });
+    const settingsRow = db.prepare('SELECT value FROM clinic_settings WHERE key = ?').get('weekly_holiday');
+    const offDays = (settingsRow?.value || 'Friday').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+    if (!offDays.includes('none')) {
+      const [year, month, day] = preferred_date.split('-').map(Number);
+      const dateObj = new Date(year, month - 1, day);
+      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const dayName = dayNames[dateObj.getDay()];
+      if (offDays.includes(dayName.toLowerCase())) {
+        return res.status(400).json({ error: `Dental clinic is closed on ${dayName}s. Please choose a working day.` });
+      }
     }
   }
+
+  let createdId = null;
+  let supabaseRecord = null;
 
   if (supabase) {
     try {
@@ -39,33 +48,48 @@ router.post('/request', async (req, res) => {
         .select()
         .single();
       if (!error && data) {
-        return res.status(201).json({
-          success: true,
-          message: 'Consultation request submitted! A dental coordinator will contact you promptly.',
-          consultation: data
-        });
+        supabaseRecord = data;
+        createdId = data.id;
       }
     } catch (e) {
       console.warn('[Supabase Consultation Error]', e.message);
     }
   }
 
-  const result = db.prepare(`
-    INSERT INTO consultations (
-      patient_name, patient_email, patient_phone, doctor_id, preferred_date, preferred_time, dental_concern, status
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending')
-  `).run(
-    patient_name.trim(),
-    patient_email || '',
-    patient_phone.trim(),
-    doctor_id ? parseInt(doctor_id, 10) : null,
-    preferred_date || null,
-    preferred_time || null,
-    dental_concern.trim()
-  );
+  // Always persist into local store/SQLite for fast fallback
+  try {
+    const result = db.prepare(`
+      INSERT INTO consultations (
+        patient_name, patient_email, patient_phone, doctor_id, preferred_date, preferred_time, dental_concern, status
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending')
+    `).run(
+      patient_name.trim(),
+      patient_email || '',
+      patient_phone.trim(),
+      doctor_id ? parseInt(doctor_id, 10) : null,
+      preferred_date || null,
+      preferred_time || null,
+      dental_concern.trim()
+    );
+    if (!createdId) createdId = result.lastInsertRowid;
+  } catch (e) {
+    console.warn('[Local Consultation Insert Error]', e.message);
+  }
 
-  const created = db.prepare('SELECT * FROM consultations WHERE id = ?').get(result.lastInsertRowid);
+  const created = supabaseRecord || db.prepare('SELECT * FROM consultations WHERE id = ?').get(createdId) || {
+    id: createdId || Date.now(),
+    patient_name,
+    patient_email,
+    patient_phone,
+    doctor_id,
+    preferred_date,
+    preferred_time,
+    dental_concern,
+    status: 'Pending',
+    created_at: new Date().toISOString()
+  };
+
   res.status(201).json({
     success: true,
     message: 'Consultation request submitted! A dental coordinator will contact you promptly.',
@@ -77,20 +101,27 @@ router.post('/request', async (req, res) => {
 router.get('/', authenticateAdmin, async (req, res) => {
   const { status } = req.query;
 
+  // Build doctor names map
+  const doctors = db.prepare('SELECT id, name FROM doctors').all();
+  const docMap = {};
+  for (const d of doctors) docMap[d.id] = d.name;
+
   if (supabase) {
     try {
-      let supaQuery = supabase.from('consultations').select('*, doctors(name)');
+      let supaQuery = supabase.from('consultations').select('*');
       if (status && status !== 'All') supaQuery = supaQuery.eq('status', status);
       supaQuery = supaQuery.order('id', { ascending: false });
       const { data, error } = await supaQuery;
       if (!error && data && data.length > 0) {
-        const mapped = data.map(c => ({
+        const mapped = data.map((c) => ({
           ...c,
-          doctor_name: c.doctors ? c.doctors.name : null
+          doctor_name: c.doctor_id ? (docMap[c.doctor_id] || `Doctor #${c.doctor_id}`) : 'General Specialist'
         }));
         return res.json({ success: true, consultations: mapped });
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn('[Supabase Consultations Fetch Error]', e.message);
+    }
   }
 
   let query = `
@@ -106,10 +137,81 @@ router.get('/', authenticateAdmin, async (req, res) => {
     params.push(status);
   }
 
-  query += ' ORDER BY c.created_at DESC';
+  query += ' ORDER BY c.id DESC';
 
   const list = db.prepare(query).all(...params);
-  res.json({ success: true, consultations: list });
+  const mappedList = list.map((c) => ({
+    ...c,
+    doctor_name: c.doctor_name || (c.doctor_id ? docMap[c.doctor_id] : null) || 'General Specialist'
+  }));
+
+  res.json({ success: true, consultations: mappedList });
+});
+
+// Admin: Manually create a consultation inquiry
+router.post('/manual', authenticateAdmin, async (req, res) => {
+  const {
+    patient_name,
+    patient_email,
+    patient_phone,
+    doctor_id,
+    preferred_date,
+    preferred_time,
+    dental_concern,
+    status = 'Pending'
+  } = req.body;
+
+  if (!patient_name || !patient_phone || !dental_concern) {
+    return res.status(400).json({ error: 'Patient name, phone, and dental concern description are required' });
+  }
+
+  let created = null;
+
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('consultations')
+        .insert([{
+          patient_name: patient_name.trim(),
+          patient_email: patient_email || '',
+          patient_phone: patient_phone.trim(),
+          doctor_id: doctor_id ? parseInt(doctor_id, 10) : null,
+          preferred_date: preferred_date || null,
+          preferred_time: preferred_time || null,
+          dental_concern: dental_concern.trim(),
+          status
+        }])
+        .select()
+        .single();
+      if (!error && data) created = data;
+    } catch (e) {}
+  }
+
+  const result = db.prepare(`
+    INSERT INTO consultations (
+      patient_name, patient_email, patient_phone, doctor_id, preferred_date, preferred_time, dental_concern, status
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    patient_name.trim(),
+    patient_email || '',
+    patient_phone.trim(),
+    doctor_id ? parseInt(doctor_id, 10) : null,
+    preferred_date || null,
+    preferred_time || null,
+    dental_concern.trim(),
+    status
+  );
+
+  if (!created) {
+    created = db.prepare('SELECT * FROM consultations WHERE id = ?').get(result.lastInsertRowid);
+  }
+
+  res.status(201).json({
+    success: true,
+    message: 'Consultation inquiry created successfully',
+    consultation: created
+  });
 });
 
 // Admin: Update consultation status (Approved, Rejected, Rescheduled, Cancelled, Completed)
@@ -124,11 +226,6 @@ router.patch('/:id/status', authenticateAdmin, async (req, res) => {
         ...(preferred_time ? { preferred_time } : {})
       }).eq('id', req.params.id);
     } catch (e) {}
-  }
-
-  const current = db.prepare('SELECT * FROM consultations WHERE id = ?').get(req.params.id);
-  if (!current) {
-    return res.status(404).json({ error: 'Consultation request not found' });
   }
 
   let query = 'UPDATE consultations SET status = ?';

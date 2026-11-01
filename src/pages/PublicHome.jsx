@@ -34,6 +34,7 @@ export default function PublicHome() {
 
   // Modal states
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState('appointment');
   const [preSelectedDoctor, setPreSelectedDoctor] = useState(null);
   const [preSelectedService, setPreSelectedService] = useState(null);
 
@@ -83,9 +84,10 @@ export default function PublicHome() {
     }
   };
 
-  const handleOpenBooking = (doc = null, serv = null) => {
+  const handleOpenBooking = (doc = null, serv = null, mode = 'appointment') => {
     setPreSelectedDoctor(doc);
     setPreSelectedService(serv);
+    setModalMode(mode);
     setIsBookingModalOpen(true);
   };
 
@@ -152,7 +154,7 @@ export default function PublicHome() {
         {isSectionVisible('doctors') && (
           <Doctors
             doctors={doctors}
-            onBookDoctor={(doc) => handleOpenBooking(doc, null)}
+            onBookDoctor={(doc, mode = 'consultation') => handleOpenBooking(doc, null, mode)}
           />
         )}
 
@@ -193,6 +195,7 @@ export default function PublicHome() {
         settings={settings}
         preSelectedDoctor={preSelectedDoctor}
         preSelectedService={preSelectedService}
+        initialMode={modalMode}
       />
     </div>
   );
