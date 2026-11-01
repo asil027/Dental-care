@@ -132,7 +132,25 @@ router.get('/overview', authenticateAdmin, async (req, res) => {
       LIMIT 5
     `).all();
 
-    // 4. Weekly appointments chart (Mon to Sun)
+    // 4. All appointments summary for dynamic admin charts
+    const allAppointments = supaAppointments 
+      ? supaAppointments.map(a => ({
+          id: a.id,
+          appointment_date: a.appointment_date,
+          appointment_time: a.appointment_time,
+          status: a.status,
+          fee: a.fee,
+          service_name: a.service_name,
+          doctor_name: a.doctor_name,
+          created_at: a.created_at
+        }))
+      : db.prepare(`
+          SELECT id, appointment_date, appointment_time, status, fee, service_name, doctor_name, created_at
+          FROM appointments
+          ORDER BY appointment_date DESC
+        `).all();
+
+    // 5. Weekly appointments chart (Mon to Sun)
     // Map dates of this week
     const now = new Date();
     // find Monday of current week
@@ -148,7 +166,9 @@ router.get('/overview', authenticateAdmin, async (req, res) => {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
       const dStr = d.toISOString().split('T')[0];
-      const count = db.prepare('SELECT COUNT(*) as count FROM appointments WHERE appointment_date = ?').get(dStr).count;
+      const count = supaAppointments 
+        ? supaAppointments.filter(a => a.appointment_date === dStr).length
+        : db.prepare('SELECT COUNT(*) as count FROM appointments WHERE appointment_date = ?').get(dStr).count;
       weeklyData.push({
         day: weekLabels[i],
         date: dStr,
@@ -157,13 +177,28 @@ router.get('/overview', authenticateAdmin, async (req, res) => {
     }
 
     // Monthly breakdown (last 6 months)
-    const monthlyStats = db.prepare(`
-      SELECT SUBSTR(appointment_date, 1, 7) as month, COUNT(*) as count, SUM(fee) as revenue
-      FROM appointments
-      GROUP BY SUBSTR(appointment_date, 1, 7)
-      ORDER BY month DESC
-      LIMIT 6
-    `).all();
+    let monthlyStats = [];
+    if (supaAppointments && supaAppointments.length > 0) {
+      const monthMap = {};
+      for (const a of supaAppointments) {
+        if (!a.appointment_date) continue;
+        const m = a.appointment_date.substring(0, 7);
+        if (!monthMap[m]) monthMap[m] = { month: m, count: 0, revenue: 0 };
+        monthMap[m].count += 1;
+        if (a.status === 'Confirmed' || a.status === 'Completed') {
+          monthMap[m].revenue += (Number(a.fee) || 0);
+        }
+      }
+      monthlyStats = Object.values(monthMap).sort((a, b) => b.month.localeCompare(a.month)).slice(0, 6);
+    } else {
+      monthlyStats = db.prepare(`
+        SELECT SUBSTR(appointment_date, 1, 7) as month, COUNT(*) as count, SUM(fee) as revenue
+        FROM appointments
+        GROUP BY SUBSTR(appointment_date, 1, 7)
+        ORDER BY month DESC
+        LIMIT 6
+      `).all();
+    }
 
     res.json({
       success: true,
@@ -184,6 +219,7 @@ router.get('/overview', authenticateAdmin, async (req, res) => {
         pendingTestimonials
       },
       upcomingAppointments,
+      allAppointments,
       recentPatients,
       recentMessages,
       recentTestimonials,

@@ -21,7 +21,9 @@ import {
   X,
   Phone,
   AlertCircle,
-  Star
+  Star,
+  ChevronDown,
+  Check
 } from 'lucide-react';
 import { apiRequest } from '../utils/api';
 import { formatPKR } from '../utils/time';
@@ -31,6 +33,9 @@ export default function DashboardHome() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [selectedMessage, setSelectedMessage] = useState(null);
+  const [chartTimeframe, setChartTimeframe] = useState('This Week');
+  const [isTimeframeOpen, setIsTimeframeOpen] = useState(false);
+  const [hoveredPoint, setHoveredPoint] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -44,10 +49,13 @@ export default function DashboardHome() {
 
       // Merge local appointments
       const localAppts = JSON.parse(localStorage.getItem('dc_submitted_appointments') || '[]');
-      const serverAppts = res.upcomingAppointments || [];
-      const serverCodes = new Set(serverAppts.map(a => a.appointment_code || a.id));
+      const serverUpcoming = res.upcomingAppointments || [];
+      const serverAll = res.allAppointments || serverUpcoming;
+
+      const serverCodes = new Set(serverAll.map(a => a.appointment_code || a.id));
       const missingAppts = localAppts.filter(a => !serverCodes.has(a.appointment_code || a.id));
-      const mergedAppts = [...missingAppts, ...serverAppts];
+      const mergedAllAppts = [...missingAppts, ...serverAll];
+      const mergedUpcoming = [...missingAppts, ...serverUpcoming];
 
       // Merge local contact messages
       const localMsgs = JSON.parse(localStorage.getItem('dc_submitted_messages') || '[]');
@@ -65,7 +73,8 @@ export default function DashboardHome() {
 
       const mergedData = {
         ...res,
-        upcomingAppointments: mergedAppts,
+        upcomingAppointments: mergedUpcoming,
+        allAppointments: mergedAllAppts,
         recentMessages: mergedMsgs,
         recentTestimonials: mergedRevs,
         stats: {
@@ -169,27 +178,186 @@ export default function DashboardHome() {
     }
   };
 
-  // Compute SVG chart coordinates for spline curve
-  const chartHeight = 120;
+  // Dynamic chart data calculation matching selected timeframe
+  const computeChartData = (timeframe, appointments = [], defaultWeekly = []) => {
+    const now = new Date();
+
+    if (timeframe === 'This Week') {
+      const dayOfWeek = now.getDay();
+      const distanceToMonday = (dayOfWeek + 6) % 7;
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - distanceToMonday);
+
+      const weekLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      return weekLabels.map((day, i) => {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        const dStr = d.toISOString().split('T')[0];
+        const count = appointments.filter((a) => a.appointment_date === dStr).length;
+        return {
+          day,
+          date: dStr,
+          fullDate: d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+          appointments: count
+        };
+      });
+    }
+
+    if (timeframe === 'Last Week') {
+      const dayOfWeek = now.getDay();
+      const distanceToMonday = (dayOfWeek + 6) % 7 + 7;
+      const prevMonday = new Date(now);
+      prevMonday.setDate(now.getDate() - distanceToMonday);
+
+      const weekLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      return weekLabels.map((day, i) => {
+        const d = new Date(prevMonday);
+        d.setDate(prevMonday.getDate() + i);
+        const dStr = d.toISOString().split('T')[0];
+        const count = appointments.filter((a) => a.appointment_date === dStr).length;
+        return {
+          day,
+          date: dStr,
+          fullDate: d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+          appointments: count
+        };
+      });
+    }
+
+    if (timeframe === 'This Month') {
+      const year = now.getFullYear();
+      const month = now.getMonth();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const monthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
+      const monthName = now.toLocaleString('en-US', { month: 'short' });
+
+      const periods = [
+        { day: 'Week 1', start: 1, end: 7 },
+        { day: 'Week 2', start: 8, end: 14 },
+        { day: 'Week 3', start: 15, end: 21 },
+        { day: 'Week 4', start: 22, end: daysInMonth }
+      ];
+
+      return periods.map((p) => {
+        const count = appointments.filter((a) => {
+          if (!a.appointment_date || !a.appointment_date.startsWith(monthPrefix)) return false;
+          const dayPart = parseInt(a.appointment_date.split('-')[2], 10);
+          return dayPart >= p.start && dayPart <= p.end;
+        }).length;
+        return {
+          day: p.day,
+          date: `${monthPrefix}-${p.start}`,
+          fullDate: `${monthName} ${p.start} – ${p.end}`,
+          appointments: count
+        };
+      });
+    }
+
+    if (timeframe === 'Last 30 Days') {
+      const intervals = [];
+      for (let i = 5; i >= 0; i--) {
+        const endDaysAgo = i * 5;
+        const startDaysAgo = endDaysAgo + 4;
+        const sDate = new Date(now);
+        sDate.setDate(now.getDate() - startDaysAgo);
+        const eDate = new Date(now);
+        eDate.setDate(now.getDate() - endDaysAgo);
+
+        const sStr = sDate.toISOString().split('T')[0];
+        const eStr = eDate.toISOString().split('T')[0];
+
+        const count = appointments.filter((a) => a.appointment_date && a.appointment_date >= sStr && a.appointment_date <= eStr).length;
+        intervals.push({
+          day: `${sDate.getDate()}/${sDate.getMonth() + 1}`,
+          date: sStr,
+          fullDate: `${sDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${eDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
+          appointments: count
+        });
+      }
+      return intervals;
+    }
+
+    if (timeframe === 'All Time') {
+      const months = [];
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const mStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        const count = appointments.filter((a) => a.appointment_date && a.appointment_date.startsWith(mStr)).length;
+        months.push({
+          day: d.toLocaleString('en-US', { month: 'short' }),
+          date: mStr,
+          fullDate: d.toLocaleString('en-US', { month: 'long', year: 'numeric' }),
+          appointments: count
+        });
+      }
+      return months;
+    }
+
+    return defaultWeekly;
+  };
+
+  const getTimeframeSubtitle = (tf) => {
+    switch (tf) {
+      case 'This Week':
+        return 'Weekly patient traffic breakdown (Mon – Sun)';
+      case 'Last Week':
+        return 'Previous week patient traffic breakdown (Mon – Sun)';
+      case 'This Month':
+        return 'Current month patient traffic by weekly intervals';
+      case 'Last 30 Days':
+        return 'Past 30 days patient traffic overview (5-day intervals)';
+      case 'All Time':
+        return 'Historical patient traffic volume by month';
+      default:
+        return 'Patient appointment traffic overview';
+    }
+  };
+
+  // Compute SVG chart coordinates for dynamic spline curve
+  const chartHeight = 125;
   const chartWidth = 500;
-  const maxCount = Math.max(...weeklyChart.map((d) => d.appointments), 5);
-  const points = weeklyChart.map((d, index) => {
-    const x = (index / (weeklyChart.length - 1)) * (chartWidth - 60) + 30;
-    const y = chartHeight - (d.appointments / maxCount) * (chartHeight - 30) - 15;
-    return { x, y, day: d.day, count: d.appointments };
+  const paddingX = 35;
+  const paddingY = 22;
+
+  const activeChartData = computeChartData(
+    chartTimeframe,
+    data?.allAppointments || data?.upcomingAppointments || [],
+    weeklyChart || []
+  );
+
+  const totalApptsInPeriod = activeChartData.reduce((sum, d) => sum + d.appointments, 0);
+  const peakAppts = Math.max(...activeChartData.map((d) => d.appointments), 0);
+  const maxCount = Math.max(peakAppts, 5);
+
+  const points = activeChartData.map((d, index) => {
+    const x = paddingX + (index / (activeChartData.length - 1 || 1)) * (chartWidth - paddingX * 2);
+    const y = (chartHeight - paddingY) - (d.appointments / maxCount) * (chartHeight - paddingY * 2);
+    return {
+      x,
+      y,
+      day: d.day,
+      date: d.date,
+      fullDate: d.fullDate,
+      count: d.appointments
+    };
   });
 
   // Construct smooth SVG path
-  let pathD = `M ${points[0].x} ${points[0].y}`;
-  for (let i = 0; i < points.length - 1; i++) {
-    const p0 = points[i];
-    const p1 = points[i + 1];
-    const mx = (p0.x + p1.x) / 2;
-    pathD += ` C ${mx} ${p0.y}, ${mx} ${p1.y}, ${p1.x} ${p1.y}`;
+  let pathD = '';
+  if (points.length > 0) {
+    pathD = `M ${points[0].x} ${points[0].y}`;
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[i];
+      const p1 = points[i + 1];
+      const mx = (p0.x + p1.x) / 2;
+      pathD += ` C ${mx} ${p0.y}, ${mx} ${p1.y}, ${p1.x} ${p1.y}`;
+    }
   }
 
   // Gradient area path
-  const areaD = `${pathD} L ${points[points.length - 1].x} ${chartHeight} L ${points[0].x} ${chartHeight} Z`;
+  const areaD = points.length > 0
+    ? `${pathD} L ${points[points.length - 1].x} ${chartHeight} L ${points[0].x} ${chartHeight} Z`
+    : '';
 
   return (
     <div className="space-y-7">
@@ -527,25 +695,98 @@ export default function DashboardHome() {
             )}
           </div>
 
-          {/* Appointments Overview Spline Chart matching reference image */}
+          {/* Appointments Overview Dynamic Interactive Spline Chart */}
           <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <div>
-                <h3 className="text-base font-extrabold text-[#092C59]">
-                  Appointments Overview
-                </h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-extrabold text-[#092C59]">
+                    Appointments Overview
+                  </h3>
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-[#0756A6] border border-blue-200">
+                    {totalApptsInPeriod} {totalApptsInPeriod === 1 ? 'Appt' : 'Appts'}
+                  </span>
+                  {peakAppts > 0 && (
+                    <span className="hidden md:inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      Peak: {peakAppts}
+                    </span>
+                  )}
+                </div>
                 <span className="text-xs text-slate-400">
-                  Weekly patient traffic breakdown (Mon – Sun)
+                  {getTimeframeSubtitle(chartTimeframe)}
                 </span>
               </div>
-              <div className="text-xs font-semibold px-3 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">
-                This Week ▾
+
+              {/* Interactive Timeframe Dropdown */}
+              <div className="relative self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setIsTimeframeOpen((prev) => !prev)}
+                  className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition cursor-pointer shadow-2xs"
+                >
+                  <span>{chartTimeframe}</span>
+                  <ChevronDown className={`w-3.5 h-3.5 text-slate-500 transition-transform duration-200 ${isTimeframeOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {isTimeframeOpen && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-20" 
+                      onClick={() => setIsTimeframeOpen(false)} 
+                    />
+                    <div className="absolute right-0 top-full mt-1.5 w-52 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-30 animate-in fade-in zoom-in-95 duration-100">
+                      <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        Select Timeframe
+                      </div>
+                      {[
+                        { key: 'This Week', label: 'This Week (Mon – Sun)' },
+                        { key: 'Last Week', label: 'Last Week' },
+                        { key: 'This Month', label: 'This Month' },
+                        { key: 'Last 30 Days', label: 'Last 30 Days' },
+                        { key: 'All Time', label: 'All Time (Monthly)' },
+                      ].map((opt) => (
+                        <button
+                          key={opt.key}
+                          type="button"
+                          onClick={() => {
+                            setChartTimeframe(opt.key);
+                            setIsTimeframeOpen(false);
+                            setHoveredPoint(null);
+                          }}
+                          className={`w-full text-left px-3 py-2 text-xs font-semibold flex items-center justify-between transition cursor-pointer ${
+                            chartTimeframe === opt.key
+                              ? 'bg-blue-50 text-[#0756A6] font-bold'
+                              : 'text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span>{opt.label}</span>
+                          {chartTimeframe === opt.key && <Check className="w-3.5 h-3.5 text-[#0756A6]" />}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
-            {/* SVG Interactive Spline Curve */}
-            <div className="w-full overflow-hidden">
-              <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full h-36">
+            {/* SVG Interactive Spline Curve with Tooltips */}
+            <div className="w-full relative overflow-visible">
+              {hoveredPoint && (
+                <div
+                  className="absolute z-10 pointer-events-none transform -translate-x-1/2 -translate-y-full px-2.5 py-1.5 bg-[#092C59] text-white rounded-lg shadow-lg text-[11px] font-bold whitespace-nowrap transition-all duration-150"
+                  style={{
+                    left: `${(hoveredPoint.x / chartWidth) * 100}%`,
+                    top: `${(hoveredPoint.y / chartHeight) * 100}%`,
+                    marginTop: '-10px'
+                  }}
+                >
+                  <div className="text-[10px] text-blue-200 font-medium">{hoveredPoint.fullDate}</div>
+                  <div className="text-xs font-black">{hoveredPoint.count} Appointment{hoveredPoint.count === 1 ? '' : 's'}</div>
+                  <div className="w-2 h-2 bg-[#092C59] transform rotate-45 absolute left-1/2 -translate-x-1/2 -bottom-1" />
+                </div>
+              )}
+
+              <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full h-36 overflow-visible">
                 <defs>
                   <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#0756A6" stopOpacity="0.25" />
@@ -554,36 +795,67 @@ export default function DashboardHome() {
                 </defs>
 
                 {/* Shaded Area */}
-                <path d={areaD} fill="url(#chartGradient)" />
+                {areaD && <path d={areaD} fill="url(#chartGradient)" />}
 
                 {/* Spline Stroke Line */}
-                <path
-                  d={pathD}
-                  fill="none"
-                  stroke="#0756A6"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                />
+                {pathD && (
+                  <path
+                    d={pathD}
+                    fill="none"
+                    stroke="#0756A6"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                  />
+                )}
 
                 {/* Data Points */}
-                {points.map((pt, i) => (
-                  <g key={i}>
-                    <circle
-                      cx={pt.x}
-                      cy={pt.y}
-                      r="4"
-                      className="fill-white stroke-[#0756A6] stroke-2 hover:r-6 transition-all"
-                    />
-                    <text
-                      x={pt.x}
-                      y={chartHeight - 2}
-                      textAnchor="middle"
-                      className="text-[10px] fill-slate-400 font-medium"
+                {points.map((pt, i) => {
+                  const isHovered = hoveredPoint && hoveredPoint.day === pt.day && hoveredPoint.date === pt.date;
+                  return (
+                    <g
+                      key={i}
+                      className="cursor-pointer"
+                      onMouseEnter={() => setHoveredPoint(pt)}
+                      onMouseLeave={() => setHoveredPoint(null)}
+                      onClick={() => setHoveredPoint(pt)}
                     >
-                      {pt.day}
-                    </text>
-                  </g>
-                ))}
+                      {/* Invisible larger hover hit area */}
+                      <circle cx={pt.x} cy={pt.y} r="14" fill="transparent" />
+
+                      {/* Active glow on hover */}
+                      {isHovered && (
+                        <circle
+                          cx={pt.x}
+                          cy={pt.y}
+                          r="8"
+                          className="fill-blue-400/30 animate-ping"
+                        />
+                      )}
+
+                      {/* Point circle */}
+                      <circle
+                        cx={pt.x}
+                        cy={pt.y}
+                        r={isHovered ? 6 : 4}
+                        className={`fill-white stroke-[#0756A6] transition-all duration-150 ${
+                          isHovered ? 'stroke-[3]' : 'stroke-2'
+                        }`}
+                      />
+
+                      {/* Day / Date label */}
+                      <text
+                        x={pt.x}
+                        y={chartHeight - 2}
+                        textAnchor="middle"
+                        className={`text-[10px] font-medium transition-colors ${
+                          isHovered ? 'fill-[#0756A6] font-bold' : 'fill-slate-400'
+                        }`}
+                      >
+                        {pt.day}
+                      </text>
+                    </g>
+                  );
+                })}
               </svg>
             </div>
           </div>
