@@ -201,7 +201,7 @@ router.get('/check-availability', (req, res) => {
 });
 
 // Public: Book appointment
-router.post('/book', (req, res) => {
+router.post('/book', async (req, res) => {
   const {
     patient_name,
     patient_email,
@@ -531,10 +531,6 @@ router.patch('/:id/reschedule', authenticateAdmin, async (req, res) => {
   res.json({ success: true, appointment: updated, message: 'Appointment rescheduled successfully' });
 });
 
-  const updated = db.prepare('SELECT * FROM appointments WHERE id = ?').get(apptId);
-  res.json({ success: true, appointment: updated, message: 'Appointment rescheduled successfully' });
-});
-
 // Admin: Edit appointment info
 router.put('/:id', authenticateAdmin, (req, res) => {
   const {
@@ -594,9 +590,15 @@ router.put('/:id', authenticateAdmin, (req, res) => {
 });
 
 // Admin: Delete appointment
-router.delete('/:id', authenticateAdmin, (req, res) => {
+router.delete('/:id', authenticateAdmin, async (req, res) => {
+  if (supabase) {
+    try {
+      await supabase.from('appointments').delete().eq('id', req.params.id);
+    } catch (e) {}
+  }
+
   const result = db.prepare('DELETE FROM appointments WHERE id = ?').run(req.params.id);
-  if (result.changes === 0) {
+  if (result.changes === 0 && !supabase) {
     return res.status(404).json({ error: 'Appointment not found' });
   }
   res.json({ success: true, message: 'Appointment deleted successfully' });
