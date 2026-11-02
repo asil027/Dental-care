@@ -75,9 +75,22 @@ for (const [prefix, r] of routeList) {
   app.use(prefix, r);
 }
 
-// Health checks
-app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
-app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
+// Health checks with Supabase status reporting
+const healthHandler = async (req, res) => {
+  const { testConnection, isConfigured } = require('./supabase');
+  const supaStatus = await testConnection();
+  res.json({
+    status: 'ok',
+    time: new Date().toISOString(),
+    database: {
+      supabaseConfigured: isConfigured(),
+      supabase: supaStatus,
+      sqliteFallback: true
+    }
+  });
+};
+app.get('/api/health', healthHandler);
+app.get('/health', healthHandler);
 
 // Serve frontend build if exists (standalone local mode only, Vercel handles static assets directly)
 if (!process.env.VERCEL) {

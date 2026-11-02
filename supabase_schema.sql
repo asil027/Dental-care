@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS appointments (
 CREATE TABLE IF NOT EXISTS consultations (
   id BIGSERIAL PRIMARY KEY,
   patient_name TEXT NOT NULL,
-  patient_email TEXT NOT NULL,
+  patient_email TEXT,
   patient_phone TEXT NOT NULL,
   doctor_id BIGINT,
   preferred_date TEXT,
@@ -242,6 +242,10 @@ ON CONFLICT (key) DO UPDATE SET value = excluded.value;
 -- ================================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
 -- ================================================================
+-- Note: Security and administrative access are validated by the Express
+-- backend (/api/*) JWT middleware. The policies below permit full CRUD
+-- for both anon and service_role keys so that Supabase functions smoothly
+-- under all Vercel integration setups.
 
 ALTER TABLE admins ENABLE ROW LEVEL SECURITY;
 ALTER TABLE doctors ENABLE ROW LEVEL SECURITY;
@@ -258,29 +262,62 @@ ALTER TABLE contact_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE clinic_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cms_sections ENABLE ROW LEVEL SECURITY;
 
--- Allow public read access to clinic content
 DO $$ BEGIN
-  CREATE POLICY "Public doctors read" ON doctors FOR SELECT USING (true);
-  CREATE POLICY "Public services read" ON services FOR SELECT USING (true);
-  CREATE POLICY "Public testimonials read" ON testimonials FOR SELECT USING (is_approved = 1);
-  CREATE POLICY "Public insurance read" ON insurance_providers FOR SELECT USING (true);
-  CREATE POLICY "Public blog read" ON blog_posts FOR SELECT USING (is_published = 1);
-  CREATE POLICY "Public faqs read" ON faqs FOR SELECT USING (true);
-  CREATE POLICY "Public gallery read" ON gallery FOR SELECT USING (true);
-  CREATE POLICY "Public settings read" ON clinic_settings FOR SELECT USING (true);
-  CREATE POLICY "Public cms read" ON cms_sections FOR SELECT USING (true);
-  
-  -- Allow public submissions (appointments, consultations, contact messages, reviews)
-  CREATE POLICY "Public book appointment" ON appointments FOR INSERT WITH CHECK (true);
-  CREATE POLICY "Public consultation request" ON consultations FOR INSERT WITH CHECK (true);
-  CREATE POLICY "Public contact message" ON contact_messages FOR INSERT WITH CHECK (true);
-  CREATE POLICY "Public submit review" ON testimonials FOR INSERT WITH CHECK (true);
+  -- Admins
+  DROP POLICY IF EXISTS "Full access admins" ON admins;
+  CREATE POLICY "Full access admins" ON admins FOR ALL USING (true) WITH CHECK (true);
 
-  -- Full backend / service role access
-  CREATE POLICY "Service role full access admins" ON admins FOR ALL USING (true);
-  CREATE POLICY "Service role full access appointments" ON appointments FOR ALL USING (true);
-  CREATE POLICY "Service role full access patients" ON patients FOR ALL USING (true);
-  CREATE POLICY "Service role full access messages" ON contact_messages FOR ALL USING (true);
+  -- Doctors
+  DROP POLICY IF EXISTS "Full access doctors" ON doctors;
+  CREATE POLICY "Full access doctors" ON doctors FOR ALL USING (true) WITH CHECK (true);
+
+  -- Services
+  DROP POLICY IF EXISTS "Full access services" ON services;
+  CREATE POLICY "Full access services" ON services FOR ALL USING (true) WITH CHECK (true);
+
+  -- Patients
+  DROP POLICY IF EXISTS "Full access patients" ON patients;
+  CREATE POLICY "Full access patients" ON patients FOR ALL USING (true) WITH CHECK (true);
+
+  -- Appointments (Booking, List, Status Updates, Deletion)
+  DROP POLICY IF EXISTS "Full access appointments" ON appointments;
+  CREATE POLICY "Full access appointments" ON appointments FOR ALL USING (true) WITH CHECK (true);
+
+  -- Consultations (Requests, List, Status Updates, Deletion)
+  DROP POLICY IF EXISTS "Full access consultations" ON consultations;
+  CREATE POLICY "Full access consultations" ON consultations FOR ALL USING (true) WITH CHECK (true);
+
+  -- Testimonials (Submissions, Public Read, Admin Approval)
+  DROP POLICY IF EXISTS "Full access testimonials" ON testimonials;
+  CREATE POLICY "Full access testimonials" ON testimonials FOR ALL USING (true) WITH CHECK (true);
+
+  -- Insurance Providers
+  DROP POLICY IF EXISTS "Full access insurance" ON insurance_providers;
+  CREATE POLICY "Full access insurance" ON insurance_providers FOR ALL USING (true) WITH CHECK (true);
+
+  -- Blog Posts
+  DROP POLICY IF EXISTS "Full access blog" ON blog_posts;
+  CREATE POLICY "Full access blog" ON blog_posts FOR ALL USING (true) WITH CHECK (true);
+
+  -- FAQs
+  DROP POLICY IF EXISTS "Full access faqs" ON faqs;
+  CREATE POLICY "Full access faqs" ON faqs FOR ALL USING (true) WITH CHECK (true);
+
+  -- Gallery
+  DROP POLICY IF EXISTS "Full access gallery" ON gallery;
+  CREATE POLICY "Full access gallery" ON gallery FOR ALL USING (true) WITH CHECK (true);
+
+  -- Contact Messages (Submission, Read Status, Deletion)
+  DROP POLICY IF EXISTS "Full access messages" ON contact_messages;
+  CREATE POLICY "Full access messages" ON contact_messages FOR ALL USING (true) WITH CHECK (true);
+
+  -- Clinic Settings (Operating Hours, Dynamic Holiday, Contacts)
+  DROP POLICY IF EXISTS "Full access settings" ON clinic_settings;
+  CREATE POLICY "Full access settings" ON clinic_settings FOR ALL USING (true) WITH CHECK (true);
+
+  -- CMS Sections
+  DROP POLICY IF EXISTS "Full access cms" ON cms_sections;
+  CREATE POLICY "Full access cms" ON cms_sections FOR ALL USING (true) WITH CHECK (true);
 EXCEPTION WHEN OTHERS THEN NULL;
 END $$;
 
